@@ -1,6 +1,11 @@
+import threading
+
 import streamlit as st
+
+from models.verification import VerificationReport, VerificationStatus
 from retrieval_router import route_and_retrieve
 from sources.pubmed import DEFAULT_TOOL_NAME, DEFAULT_EMAIL
+from verification_agent import verify_all
 
 # ──────────────────────────────────────────────
 # Page Configuration
@@ -22,6 +27,28 @@ SOURCE_COLORS = {
     "Europe PMC": "#6366f1",       # Indigo
     "PubMed": "#10b981",           # Emerald
     "ClinicalTrials.gov": "#f59e0b",  # Amber
+}
+
+# Status display config
+_STATUS_CONFIG = {
+    VerificationStatus.SUPPORTED: {
+        "icon": "✅",
+        "label": "Supported",
+        "bg": "rgba(16, 185, 129, 0.08)",
+        "border": "#10b981",
+    },
+    VerificationStatus.PARTIALLY_SUPPORTED: {
+        "icon": "⚠️",
+        "label": "Partially supported",
+        "bg": "rgba(245, 158, 11, 0.08)",
+        "border": "#f59e0b",
+    },
+    VerificationStatus.NOT_SUPPORTED: {
+        "icon": "❌",
+        "label": "Not supported",
+        "bg": "rgba(239, 68, 68, 0.08)",
+        "border": "#ef4444",
+    },
 }
 
 # ──────────────────────────────────────────────
@@ -121,6 +148,48 @@ st.markdown("""
         gap: 4px;
         margin-bottom: 12px;
     }
+
+    /* ── Verification badge ── */
+    .verification-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: white;
+        margin-bottom: 12px;
+        letter-spacing: 0.02em;
+    }
+    .verification-badge .score {
+        font-size: 0.85rem;
+        font-weight: 700;
+    }
+
+    /* ── Verification details ── */
+    .claim-row {
+        padding: 10px 14px;
+        margin-bottom: 8px;
+        border-radius: 8px;
+        border-left: 3px solid;
+        font-size: 0.84rem;
+        line-height: 1.5;
+    }
+    .claim-text {
+        font-style: italic;
+        color: #475569;
+        margin-bottom: 4px;
+    }
+    .claim-explanation {
+        color: #64748b;
+        font-size: 0.8rem;
+    }
+    .claim-sources {
+        color: #94a3b8;
+        font-size: 0.75rem;
+        margin-top: 2px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -128,16 +197,22 @@ st.markdown("""
 # ──────────────────────────────────────────────
 # Helper: render source badges
 # ──────────────────────────────────────────────
-def render_source_badges(source_counts: dict[str, int]) -> str:
+def render_source_badges(source_counts: dict[str, int], unique_count: int = 0) -> str:
     """Build HTML for colored source badges showing result counts."""
     if not source_counts:
         return ""
+    total_raw = sum(source_counts.values())
     badges = []
     for source, count in source_counts.items():
         color = SOURCE_COLORS.get(source, "#64748b")
         badges.append(
             f'<span class="source-badge" style="background:{color};">'
             f"{source} · {count}</span>"
+        )
+    if unique_count > 0 and unique_count < total_raw:
+        badges.append(
+            f'<span class="source-badge" style="background:#475569;">'
+            f"Unique Sources · {unique_count}</span>"
         )
     return f'<div class="source-badges-row">{"".join(badges)}</div>'
 
@@ -153,6 +228,83 @@ def render_tool_calls(tool_queries: list[str]) -> str:
             f"query: <em>{q}</em></div>"
         )
     return "".join(parts)
+
+
+def render_verification_badge(report: VerificationReport) -> str:
+    """Build HTML for the verification confidence badge."""
+    score = report.confidence_score
+    color = report.badge_color
+    emoji = report.badge_emoji
+    total = len(report.results)
+    return (
+        f'<div class="verification-badge" style="background:{color};">'
+        f'{emoji} Citation Verification: <span class="score">{score}%</span> '
+        f'({total} claims checked)</div>'
+    )
+
+
+def render_verification_details(report: VerificationReport) -> str:
+    """Build HTML for the expandable verification details."""
+    if not report.results:
+        return ""
+
+    rows = []
+    for result in report.results:
+        cfg = _STATUS_CONFIG[result.status]
+        icon = cfg["icon"]
+        label = cfg["label"]
+        bg = cfg["bg"]
+        border = cfg["border"]
+
+        # Truncate claim for display
+        claim_display = result.claim
+        if len(claim_display) > 250:
+            claim_display = claim_display[:247] + "..."
+
+        sources_str = ", ".join(
+            f"[{cid}] {title[:60]}{'...' if len(title) > 60 else ''}"
+            for cid, title in zip(result.citation_ids, result.source_titles)
+        )
+
+        rows.append(
+            f'<div class="claim-row" style="background:{bg}; border-left-color:{border};">'
+            f'<div><strong>{icon} {label}</strong></div>'
+            f'<div class="claim-text">"{claim_display}"</div>'
+            f'<div class="claim-explanation">{result.explanation}</div>'
+            f'<div class="claim-sources">Sources: {sources_str}</div>'
+            f'</div>'
+        )
+
+    return "\n".join(rows)
+
+
+def render_verification_summary(report: VerificationReport) -> str:
+    """Build a one-line summary of verification counts."""
+    parts = []
+    if report.supported_count:
+        parts.append(f"✅ {report.supported_count} supported")
+    if report.partial_count:
+        parts.append(f"⚠️ {report.partial_count} partial")
+    if report.unsupported_count:
+        parts.append(f"❌ {report.unsupported_count} unsupported")
+    return " &nbsp;·&nbsp; ".join(parts)
+
+
+# ──────────────────────────────────────────────
+# Background Verification Runner
+# ──────────────────────────────────────────────
+def _run_verification_thread(
+    synthesis_text: str,
+    reference_map: dict[int, dict],
+    result_container: dict,
+):
+    """Run verification in a background thread and store results."""
+    try:
+        report = verify_all(synthesis_text, reference_map)
+        result_container["report"] = report
+    except Exception as e:
+        result_container["error"] = str(e)
+    result_container["done"] = True
 
 
 # ──────────────────────────────────────────────
@@ -213,7 +365,8 @@ with st.sidebar:
         "1. You ask a question about a drug-target interaction.\n"
         "2. Gemma 4 decides **which sources** to query using function calling.\n"
         "3. The agent fetches real-time results from **up to 3 databases**.\n"
-        "4. Gemma synthesises a cited summary with references."
+        "4. Gemma synthesises a cited summary with references.\n"
+        "5. A **verification agent** checks each claim against its source."
     )
 
     st.markdown("---")
@@ -237,6 +390,38 @@ with st.sidebar:
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
+
+# ──────────────────────────────────────────────
+# Rendering Helpers
+# ──────────────────────────────────────────────
+def _render_entry(entry: dict):
+    """Render all parts of a chat history entry."""
+    # Tool call boxes
+    if entry.get("tool_queries"):
+        st.markdown(render_tool_calls(entry["tool_queries"]), unsafe_allow_html=True)
+    # Source badges
+    if entry.get("source_counts"):
+        unique_len = len(entry.get("reference_map", {}))
+        st.markdown(render_source_badges(entry["source_counts"], unique_len), unsafe_allow_html=True)
+
+    # Verification badge (if verification is done)
+    report = entry.get("verification_report")
+    if report is not None:
+        st.markdown(render_verification_badge(report), unsafe_allow_html=True)
+
+    # Main content
+    st.markdown(entry["content"])
+
+    # Verification details expander (if verification is done)
+    if report is not None and report.results:
+        summary = render_verification_summary(report)
+        with st.expander(f"🔍 Verification Details — {summary}", expanded=False):
+            st.markdown(
+                render_verification_details(report),
+                unsafe_allow_html=True,
+            )
+
+
 # ──────────────────────────────────────────────
 # Main Chat Area
 # ──────────────────────────────────────────────
@@ -246,13 +431,10 @@ st.caption("Ask any question about drug-target interactions and get a cited lite
 # Render existing history
 for entry in st.session_state.chat_history:
     with st.chat_message(entry["role"], avatar="🧑‍🔬" if entry["role"] == "user" else "🧬"):
-        # Tool call boxes
-        if entry.get("tool_queries"):
-            st.markdown(render_tool_calls(entry["tool_queries"]), unsafe_allow_html=True)
-        # Source badges
-        if entry.get("source_counts"):
-            st.markdown(render_source_badges(entry["source_counts"]), unsafe_allow_html=True)
-        st.markdown(entry["content"])
+        if entry["role"] == "assistant":
+            _render_entry(entry)
+        else:
+            st.markdown(entry["content"])
 
 # Chat input
 user_input = st.chat_input("e.g. What are the mechanisms of Imatinib resistance in BCR-ABL+ CML?")
@@ -269,9 +451,10 @@ if user_input:
 
     # Run agent with spinner
     with st.chat_message("assistant", avatar="🧬"):
+        # ── Phase 1: Retrieval + Synthesis ───────
         with st.spinner(spinner_text):
             try:
-                answer, source_counts, tool_queries = route_and_retrieve(
+                answer, source_counts, tool_queries, reference_map = route_and_retrieve(
                     user_query=user_input,
                     enabled_sources=enabled_sources,
                     pubmed_tool_name=pubmed_tool_name,
@@ -285,6 +468,7 @@ if user_input:
                 )
                 source_counts = {}
                 tool_queries = []
+                reference_map = {}
 
         # Display tool calls
         if tool_queries:
@@ -292,9 +476,63 @@ if user_input:
 
         # Display source badges
         if source_counts:
-            st.markdown(render_source_badges(source_counts), unsafe_allow_html=True)
+            st.markdown(render_source_badges(source_counts, len(reference_map)), unsafe_allow_html=True)
 
-        st.markdown(answer)
+        # ── Phase 2: Verification ────────────────
+        verification_report = None
+        if reference_map:
+            # Show the unverified response and a progress bar while verifying
+            verification_placeholder = st.empty()
+            verification_placeholder.markdown(
+                '<div class="verification-badge" style="background:#64748b;">'
+                '🔍 Verifying citations…</div>',
+                unsafe_allow_html=True,
+            )
+
+            # Show the response text immediately (user can read while verification runs)
+            st.markdown(answer)
+
+            # Run verification with progress tracking
+            progress_bar = st.progress(0, text="Verifying claims against sources…")
+            try:
+                def _update_progress(completed: int, total: int):
+                    progress_bar.progress(
+                        completed / total,
+                        text=f"Verified {completed}/{total} claims…",
+                    )
+
+                verification_report = verify_all(
+                    synthesis_text=answer,
+                    reference_map=reference_map,
+                    progress_callback=_update_progress,
+                )
+
+                # Replace the placeholder with the actual badge
+                progress_bar.empty()
+                verification_placeholder.markdown(
+                    render_verification_badge(verification_report),
+                    unsafe_allow_html=True,
+                )
+
+                # Show verification details expander
+                if verification_report.results:
+                    summary = render_verification_summary(verification_report)
+                    with st.expander(f"🔍 Verification Details — {summary}", expanded=False):
+                        st.markdown(
+                            render_verification_details(verification_report),
+                            unsafe_allow_html=True,
+                        )
+
+            except Exception as e:
+                progress_bar.empty()
+                verification_placeholder.markdown(
+                    '<div class="verification-badge" style="background:#64748b;">'
+                    f'⚠️ Verification failed: {e}</div>',
+                    unsafe_allow_html=True,
+                )
+        else:
+            # No reference map — just show the response
+            st.markdown(answer)
 
     # Append assistant message to history
     st.session_state.chat_history.append({
@@ -302,4 +540,6 @@ if user_input:
         "content": answer,
         "source_counts": source_counts,
         "tool_queries": tool_queries,
+        "reference_map": reference_map,
+        "verification_report": verification_report,
     })

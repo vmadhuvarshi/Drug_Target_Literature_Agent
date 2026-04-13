@@ -517,6 +517,7 @@ def _build_evidence_packet(selected_evidence: list[dict], user_query: str) -> tu
             "year": item.get("year"),
             "doi": item.get("doi"),
             "url": item.get("url", ""),
+            "abstract": item.get("abstract", ""),
         }
 
     sections = []
@@ -583,20 +584,33 @@ def _build_references_section(citation_numbers: list[int], reference_map: dict[i
 
     lines = ["## References", ""]
 
-    # Cited references first (in appearance order)
+    # Categorize items into cited and uncited
     emitted: set[int] = set()
+    cited_lines = []
+    uncited_lines = []
+    
     for num in citation_numbers:
         paper = reference_map.get(num)
         if paper is None:
             continue
-        lines.append(_format_reference_entry(num, paper))
+        cited_lines.append(_format_reference_entry(num, paper))
         emitted.add(num)
 
-    # Then uncited references (ascending ID order)
     for num in sorted(reference_map.keys()):
         if num in emitted:
             continue
-        lines.append(_format_reference_entry(num, reference_map[num]))
+        uncited_lines.append(_format_reference_entry(num, reference_map[num]))
+
+    # If we have both, add subheadings to clarify for the user
+    if cited_lines:
+        if uncited_lines:
+            lines.append("**Cited within Response:**\n")
+        lines.extend(cited_lines)
+
+    if uncited_lines:
+        if cited_lines:
+            lines.append("\n**Additional Retrieved Evidence (Not Cited):**\n")
+        lines.extend(uncited_lines)
 
     return "\n".join(lines)
 
@@ -732,6 +746,8 @@ def _synthesis_messages(
                 "- Integrate evidence across the cited items instead of listing titles.\n"
                 "- Every factual paragraph or bullet must end with inline citations.\n"
                 "- Use only citation numbers that exist in the evidence pack.\n"
+                "- You MUST incorporate and cite every single item provided in the evidence pack.\n"
+                "- Do not skip any provided references.\n"
                 "- Do not include a References section.\n\n"
                 "Curated evidence pack:\n\n"
                 f"{evidence_packet}"
@@ -811,7 +827,7 @@ def route_and_retrieve(
     enabled_sources,
     pubmed_tool_name: str = "DrugTargetAgent",
     pubmed_email: str = "user@example.com",
-) -> tuple[str, dict[str, int], list[str]]:
+) -> tuple[str, dict[str, int], list[str], dict[int, dict]]:
     """
     Agentic retrieval with mandatory synthesis:
       1. Let the model propose source-specific search queries
@@ -861,6 +877,8 @@ def route_and_retrieve(
     deduped_pool = _deduplicate_evidence(raw_pool)
     selected_evidence = _select_evidence(deduped_pool, user_query)
 
+    reference_map: dict[int, dict] = {}
+
     if not selected_evidence:
         final_text = "No results were retrieved from the enabled sources."
     else:
@@ -889,4 +907,4 @@ def route_and_retrieve(
             + "\n".join(f"- {err}" for err in clean_errors)
         )
 
-    return final_text, source_counts, tool_queries
+    return final_text, source_counts, tool_queries, reference_map
