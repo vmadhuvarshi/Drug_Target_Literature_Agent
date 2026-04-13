@@ -1,6 +1,6 @@
 import streamlit as st
-import ollama
-import requests
+from retrieval_router import route_and_retrieve
+from sources.pubmed import DEFAULT_TOOL_NAME, DEFAULT_EMAIL
 
 # ──────────────────────────────────────────────
 # Page Configuration
@@ -9,7 +9,7 @@ st.set_page_config(
     page_title="Gemma 4 Clinical Research Agent",
     page_icon="🧬",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
 # ──────────────────────────────────────────────
@@ -17,131 +17,12 @@ st.set_page_config(
 # ──────────────────────────────────────────────
 MODEL_NAME = "gemma4:e2b"
 
-SYSTEM_PROMPT = (
-    "You are a clinical research assistant. When summarizing literature, "
-    "you MUST use in-line citations (e.g., [1], [2]) and include a "
-    "'References' section at the bottom containing the Title and DOI "
-    "of the papers you used."
-)
-
-SEARCH_LITERATURE_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "search_literature",
-        "description": (
-            "Use this tool to search Europe PMC for scientific literature "
-            "when asked about drug-target interactions. Returns a list of "
-            "article titles, abstracts, and DOIs."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "The drug-target search query string (e.g., drug names, gene targets, interactions)."
-                },
-                "limit": {
-                    "type": "integer",
-                    "description": "The maximum number of literature results to return. Default is 5."
-                }
-            },
-            "required": ["query"]
-        }
-    }
+# Badge colors per source
+SOURCE_COLORS = {
+    "Europe PMC": "#6366f1",       # Indigo
+    "PubMed": "#10b981",           # Emerald
+    "ClinicalTrials.gov": "#f59e0b",  # Amber
 }
-
-# ──────────────────────────────────────────────
-# Tool Implementation
-# ──────────────────────────────────────────────
-def search_literature(query: str, limit: int = 5):
-    """
-    Calls the Europe PMC REST API to search for literature.
-    Returns a list of dicts with title, abstract, and DOI.
-    """
-    url = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
-    params = {
-        "query": query,
-        "format": "json",
-        "resultType": "core",
-        "pageSize": limit
-    }
-    response = requests.get(url, params=params)
-    response.raise_for_status()
-    data = response.json()
-
-    results = []
-    for item in data.get("resultList", {}).get("result", []):
-        results.append({
-            "title": item.get("title", "No Title"),
-            "abstract": item.get("abstractText", "No abstract available"),
-            "doi": item.get("doi", "No DOI available")
-        })
-    return results
-
-
-def format_results(literature_results):
-    """Format literature results with numbered references for the model."""
-    formatted = ""
-    for idx, paper in enumerate(literature_results, 1):
-        formatted += (
-            f"[{idx}] Title: {paper['title']}\n"
-            f"    DOI: {paper['doi']}\n"
-            f"    Abstract: {paper['abstract']}\n\n"
-        )
-    return formatted
-
-
-# ──────────────────────────────────────────────
-# Agent Logic
-# ──────────────────────────────────────────────
-def run_agent(user_query: str):
-    """
-    Runs the full agent loop:
-      1. Send user query + tool schema to Gemma
-      2. If a tool call is triggered, execute search_literature locally
-      3. Feed results back to Gemma for a cited summary
-    Returns (final_text, tool_query) where tool_query is None if no tool was called.
-    """
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": user_query}
-    ]
-
-    response = ollama.chat(
-        model=MODEL_NAME,
-        messages=messages,
-        tools=[SEARCH_LITERATURE_TOOL]
-    )
-
-    message = response.get("message", {})
-
-    if "tool_calls" in message and message["tool_calls"]:
-        tool_call = message["tool_calls"][0]
-        fn_name = tool_call["function"]["name"]
-        args = tool_call["function"]["arguments"]
-
-        if fn_name == "search_literature":
-            query = args.get("query")
-            limit = args.get("limit", 5)
-            literature_results = search_literature(query=query, limit=limit)
-            formatted = format_results(literature_results)
-
-            messages.append(message)
-            messages.append({
-                "role": "tool",
-                "content": f"Search results:\n\n{formatted}"
-            })
-
-            final_response = ollama.chat(
-                model=MODEL_NAME,
-                messages=messages,
-                tools=[SEARCH_LITERATURE_TOOL]
-            )
-            return final_response["message"]["content"], query
-    
-    # No tool call — model answered directly
-    return message.get("content", ""), None
-
 
 # ──────────────────────────────────────────────
 # Custom CSS
@@ -161,6 +42,22 @@ st.markdown("""
     }
     section[data-testid="stSidebar"] hr {
         border-color: rgba(148, 163, 184, 0.2);
+    }
+
+    /* ── Green checkboxes ── */
+    section[data-testid="stSidebar"] [data-baseweb="checkbox"] > span:first-child {
+        background-color: #10b981 !important;
+        border-color: #10b981 !important;
+    }
+
+    /* ── Sidebar text inputs ── */
+    section[data-testid="stSidebar"] [data-baseweb="input"] {
+        background-color: #1e293b !important;
+        border-color: rgba(148, 163, 184, 0.3) !important;
+    }
+    section[data-testid="stSidebar"] [data-baseweb="input"] input {
+        color: #e2e8f0 !important;
+        -webkit-text-fill-color: #e2e8f0 !important;
     }
 
     /* ── Chat input ── */
@@ -203,8 +100,59 @@ st.markdown("""
         border-radius: 4px;
         font-size: 0.8rem;
     }
+
+    /* ── Source badges ── */
+    .source-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: white;
+        margin-right: 6px;
+        margin-bottom: 6px;
+    }
+    .source-badges-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px;
+        margin-bottom: 12px;
+    }
 </style>
 """, unsafe_allow_html=True)
+
+
+# ──────────────────────────────────────────────
+# Helper: render source badges
+# ──────────────────────────────────────────────
+def render_source_badges(source_counts: dict[str, int]) -> str:
+    """Build HTML for colored source badges showing result counts."""
+    if not source_counts:
+        return ""
+    badges = []
+    for source, count in source_counts.items():
+        color = SOURCE_COLORS.get(source, "#64748b")
+        badges.append(
+            f'<span class="source-badge" style="background:{color};">'
+            f"{source} · {count}</span>"
+        )
+    return f'<div class="source-badges-row">{"".join(badges)}</div>'
+
+
+def render_tool_calls(tool_queries: list[str]) -> str:
+    """Build HTML for tool-call info boxes."""
+    if not tool_queries:
+        return ""
+    parts = []
+    for q in tool_queries:
+        parts.append(
+            f'<div class="tool-call-box">🔧 <strong>Tool called</strong> — '
+            f"query: <em>{q}</em></div>"
+        )
+    return "".join(parts)
 
 
 # ──────────────────────────────────────────────
@@ -214,7 +162,7 @@ with st.sidebar:
     st.markdown("# 🧬 Clinical Research Agent")
     st.markdown(
         '<span class="header-badge">LOCAL · PRIVATE · AGENTIC</span>',
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
     st.markdown("---")
 
@@ -226,11 +174,45 @@ with st.sidebar:
     )
 
     st.markdown("---")
+
+    # ── Data Sources ─────────────────────────────
+    st.markdown("#### 📚 Data Sources")
+    st.caption("Toggle which databases the agent can query.")
+
+    src_europe_pmc = st.checkbox("Europe PMC", value=True, key="src_epmc")
+    src_pubmed = st.checkbox("PubMed", value=True, key="src_pubmed")
+    src_clinical_trials = st.checkbox("ClinicalTrials.gov", value=True, key="src_ct")
+
+    # Build the enabled set
+    enabled_sources: list[str] = []
+    if src_europe_pmc:
+        enabled_sources.append("Europe PMC")
+    if src_pubmed:
+        enabled_sources.append("PubMed")
+    if src_clinical_trials:
+        enabled_sources.append("ClinicalTrials.gov")
+
+    st.markdown("---")
+
+    # ── Advanced Settings ────────────────────────
+    with st.expander("⚙️ Advanced Settings"):
+        pubmed_tool_name = st.text_input(
+            "PubMed tool name (NCBI)",
+            value=DEFAULT_TOOL_NAME,
+            help="Identifies your application to NCBI. Required for E-utilities.",
+        )
+        pubmed_email = st.text_input(
+            "PubMed email (NCBI)",
+            value=DEFAULT_EMAIL,
+            help="Contact email sent to NCBI with each request.",
+        )
+
+    st.markdown("---")
     st.markdown("#### How it works")
     st.markdown(
         "1. You ask a question about a drug-target interaction.\n"
-        "2. Gemma 4 decides to call the **search_literature** tool.\n"
-        "3. The tool fetches real-time results from **Europe PMC**.\n"
+        "2. Gemma 4 decides **which sources** to query using function calling.\n"
+        "3. The agent fetches real-time results from **up to 3 databases**.\n"
         "4. Gemma synthesises a cited summary with references."
     )
 
@@ -240,12 +222,13 @@ with st.sidebar:
         "What are the mechanisms of resistance to Imatinib in BCR-ABL+ CML?",
         "Find recent studies on PARP inhibitor Olaparib resistance in BRCA cancers.",
         "Summarise clinical evidence for CDK4/6 inhibitors in HR+ breast cancer.",
+        "Are there any ongoing clinical trials for CAR-T therapy in glioblastoma?",
     ]
     for ex in examples:
         st.markdown(f"- *{ex}*")
 
     st.markdown("---")
-    st.caption("Powered by Gemma 4 · Europe PMC · Streamlit")
+    st.caption("Powered by Gemma 4 · Europe PMC · PubMed · ClinicalTrials.gov · Streamlit")
 
 
 # ──────────────────────────────────────────────
@@ -263,12 +246,12 @@ st.caption("Ask any question about drug-target interactions and get a cited lite
 # Render existing history
 for entry in st.session_state.chat_history:
     with st.chat_message(entry["role"], avatar="🧑‍🔬" if entry["role"] == "user" else "🧬"):
-        if entry.get("tool_query"):
-            st.markdown(
-                f'<div class="tool-call-box">🔧 <strong>Tool called</strong> — '
-                f'<code>search_literature</code> with query: <em>{entry["tool_query"]}</em></div>',
-                unsafe_allow_html=True
-            )
+        # Tool call boxes
+        if entry.get("tool_queries"):
+            st.markdown(render_tool_calls(entry["tool_queries"]), unsafe_allow_html=True)
+        # Source badges
+        if entry.get("source_counts"):
+            st.markdown(render_source_badges(entry["source_counts"]), unsafe_allow_html=True)
         st.markdown(entry["content"])
 
 # Chat input
@@ -280,25 +263,36 @@ if user_input:
     with st.chat_message("user", avatar="🧑‍🔬"):
         st.markdown(user_input)
 
+    # Build spinner text from enabled sources
+    source_names = ", ".join(enabled_sources) if enabled_sources else "no sources"
+    spinner_text = f"Agent is querying {source_names}…"
+
     # Run agent with spinner
     with st.chat_message("assistant", avatar="🧬"):
-        with st.spinner("Agent is querying Europe PMC database..."):
+        with st.spinner(spinner_text):
             try:
-                answer, tool_query = run_agent(user_input)
+                answer, source_counts, tool_queries = route_and_retrieve(
+                    user_query=user_input,
+                    enabled_sources=enabled_sources,
+                    pubmed_tool_name=pubmed_tool_name,
+                    pubmed_email=pubmed_email,
+                )
             except Exception as e:
                 answer = (
                     f"⚠️ **Error** — could not complete the request.\n\n"
                     f"```\n{e}\n```\n\n"
                     f"Make sure Ollama is running and `{MODEL_NAME}` is pulled."
                 )
-                tool_query = None
+                source_counts = {}
+                tool_queries = []
 
-        if tool_query:
-            st.markdown(
-                f'<div class="tool-call-box">🔧 <strong>Tool called</strong> — '
-                f'<code>search_literature</code> with query: <em>{tool_query}</em></div>',
-                unsafe_allow_html=True
-            )
+        # Display tool calls
+        if tool_queries:
+            st.markdown(render_tool_calls(tool_queries), unsafe_allow_html=True)
+
+        # Display source badges
+        if source_counts:
+            st.markdown(render_source_badges(source_counts), unsafe_allow_html=True)
 
         st.markdown(answer)
 
@@ -306,5 +300,6 @@ if user_input:
     st.session_state.chat_history.append({
         "role": "assistant",
         "content": answer,
-        "tool_query": tool_query
+        "source_counts": source_counts,
+        "tool_queries": tool_queries,
     })

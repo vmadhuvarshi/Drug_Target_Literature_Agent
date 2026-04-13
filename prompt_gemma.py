@@ -58,7 +58,9 @@ def main():
         "You are a clinical research assistant. When summarizing literature, "
         "you MUST use in-line citations (e.g., [1], [2]) and include a "
         "'References' section at the bottom containing the Title and DOI "
-        "of the papers you used."
+        "of the papers you used. When listing references at the bottom, you "
+        "MUST format the DOIs as clickable Markdown links using the doi.org "
+        "resolver. Example format: [Title of Paper](https://doi.org/10.xxxx/xxxxx)"
     )
 
     # We switch to ollama.chat to use messages structure required for tool calling
