@@ -808,14 +808,31 @@ def _plan_tool_calls(user_query: str, tools: list[dict]) -> dict[str, dict]:
     )
 
     planned_calls: dict[str, dict] = {}
-    for tool_call in response.get("message", {}).get("tool_calls", []):
-        fn_name = tool_call["function"]["name"]
-        args = tool_call["function"].get("arguments", {}) or {}
+    tool_calls = response.get("message", {}).get("tool_calls") or []
+    for tool_call in tool_calls:
+        if not isinstance(tool_call, dict) or "function" not in tool_call:
+            continue
+        fn_name = tool_call["function"].get("name")
+        if not fn_name:
+            continue
+            
+        raw_args = tool_call["function"].get("arguments", {}) or {}
+        args = {}
+        if isinstance(raw_args, str):
+            try:
+                import json
+                parsed = json.loads(raw_args)
+                if isinstance(parsed, dict):
+                    args = parsed
+            except:
+                pass
+        elif isinstance(raw_args, dict):
+            args = raw_args
+            
         planned_calls[fn_name] = {
-            "query": args.get("query", user_query),
-            "limit": args.get("limit", DEFAULT_LIMIT),
+            "query": args.get("query", user_query) if isinstance(args, dict) else user_query,
+            "limit": args.get("limit", DEFAULT_LIMIT) if isinstance(args, dict) else DEFAULT_LIMIT,
         }
-
     return planned_calls
 
 
@@ -827,6 +844,7 @@ def route_and_retrieve(
     enabled_sources,
     pubmed_tool_name: str = "DrugTargetAgent",
     pubmed_email: str = "user@example.com",
+    session_id: str = None,
 ) -> tuple[str, dict[str, int], list[str], dict[int, dict]]:
     """
     Agentic retrieval with mandatory synthesis:
@@ -875,6 +893,29 @@ def route_and_retrieve(
 
     raw_pool = _flatten_results(results_by_source)
     deduped_pool = _deduplicate_evidence(raw_pool)
+    
+    # Optional: Inject Session Memory Context
+    if session_id:
+        try:
+            from session_memory import ResearchSession
+            session = ResearchSession(session_id)
+            past_papers = session.search_papers(user_query, n_results=4)
+            # filter out exact duplicates before appending to pool
+            existing_titles = {p.get("title", "").lower() for p in deduped_pool}
+            for p in past_papers:
+                if p.get("title", "").lower() not in existing_titles:
+                    p["pool_id"] = f"mem_{hash(p.get('title', ''))}"
+                    p["score"] = 999.0 # Boost memory context
+                    deduped_pool.append(p)
+            if past_papers:
+                source_counts["Session Memory"] = len(past_papers)
+        except Exception as e:
+            print(f"Session memory injection failed: {e}")
+
+    if not deduped_pool:
+        return ("No literature found for your query across the selected sources.", source_counts, tool_queries, {})
+
+    # Select the best distinct subset
     selected_evidence = _select_evidence(deduped_pool, user_query)
 
     reference_map: dict[int, dict] = {}
@@ -884,20 +925,24 @@ def route_and_retrieve(
     else:
         evidence_packet, reference_map = _build_evidence_packet(selected_evidence, user_query)
         final_text = _run_synthesis(user_query, evidence_packet, reference_map)
-
         if not final_text:
-            final_text = (
-                "⚠️ Retrieval succeeded, but the model failed to produce a valid "
-                "evidence-grounded synthesis after multiple attempts. "
-                "Please narrow the query or reduce the enabled sources and try again."
-            )
-        else:
-            # Renumber citations to a contiguous 1-based sequence
-            final_text, reference_map = _renumber_citations(final_text, reference_map)
-            citation_numbers = _extract_citation_numbers(final_text)
-            references_section = _build_references_section(citation_numbers, reference_map)
-            if references_section:
-                final_text = f"{final_text.rstrip()}\n\n{references_section}"
+            return ("Synthesis failed to generate valid citations after multiple attempts. Please try again.", source_counts, tool_queries, reference_map)
+
+        final_text, reference_map = _renumber_citations(final_text, reference_map)
+        references = _build_references_section(
+            _extract_citation_numbers(final_text), reference_map
+        )
+
+        # Save newly surfaced pool back to session memory
+        if session_id and reference_map:
+            try:
+                from session_memory import ResearchSession
+                session = ResearchSession(session_id)
+                session.add_papers(reference_map)
+            except Exception as e:
+                print(f"Session memory save failed: {e}")
+
+        final_text = f"{final_text}\n\n{references}"
 
     if retrieval_errors:
         clean_errors = [_format_retrieval_error(err) for err in retrieval_errors]

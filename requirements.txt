@@ -1,4 +1,5 @@
-ollama
-pydantic
-requests
 streamlit
+ollama
+requests
+pydantic
+chromadb

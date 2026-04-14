@@ -27,6 +27,7 @@ SOURCE_COLORS = {
     "Europe PMC": "#6366f1",       # Indigo
     "PubMed": "#10b981",           # Emerald
     "ClinicalTrials.gov": "#f59e0b",  # Amber
+    "Session Memory": "#ec4899",   # Pink
 }
 
 # Status display config
@@ -77,14 +78,27 @@ st.markdown("""
         border-color: #10b981 !important;
     }
 
-    /* ── Sidebar text inputs ── */
-    section[data-testid="stSidebar"] [data-baseweb="input"] {
+    /* ── Sidebar text inputs & selects ── */
+    section[data-testid="stSidebar"] [data-baseweb="input"],
+    section[data-testid="stSidebar"] [data-baseweb="select"] > div {
         background-color: #1e293b !important;
         border-color: rgba(148, 163, 184, 0.3) !important;
     }
-    section[data-testid="stSidebar"] [data-baseweb="input"] input {
+    section[data-testid="stSidebar"] [data-baseweb="input"] input,
+    section[data-testid="stSidebar"] [data-baseweb="select"] * {
         color: #e2e8f0 !important;
         -webkit-text-fill-color: #e2e8f0 !important;
+    }
+    
+    /* ── Sidebar Buttons ── */
+    section[data-testid="stSidebar"] button {
+        background-color: rgba(99, 102, 241, 0.15) !important;
+        border: 1px solid rgba(99, 102, 241, 0.5) !important;
+        color: #e2e8f0 !important;
+    }
+    section[data-testid="stSidebar"] button:hover {
+        background-color: rgba(99, 102, 241, 0.3) !important;
+        border: 1px solid rgba(99, 102, 241, 0.8) !important;
     }
 
     /* ── Chat input ── */
@@ -326,6 +340,80 @@ with st.sidebar:
     )
 
     st.markdown("---")
+    
+    # ── Research Sessions ────────────────────────
+    st.markdown("#### 📂 Research Sessions")
+    
+    import session_manager
+    sessions = session_manager.list_sessions()
+    
+    # New Session
+    new_session_name = st.text_input("New Session Name", placeholder="e.g. KRAS Inhibitors")
+    if st.button("➕ Create Session"):
+        if new_session_name:
+            sid = session_manager.create_session(new_session_name)
+            st.session_state.active_session_id = sid
+            st.session_state.chat_history = []
+            st.rerun()
+
+    st.markdown("---")
+    
+    if not sessions:
+        st.info("No active sessions. Create one above.")
+        st.stop()
+        
+    # Ensure active_session_id is in state
+    if "active_session_id" not in st.session_state:
+        st.session_state.active_session_id = sessions[0]["id"]
+        
+    session_opts = {s["id"]: f"{s['name']}\n(q:{s['queries_made']} p:{s['papers_retrieved']})" for s in sessions}
+
+    active_index = 0
+    if st.session_state.active_session_id in session_opts:
+        active_index = list(session_opts.keys()).index(st.session_state.active_session_id)
+
+    selected_id = st.selectbox(
+        "Select Session", 
+        options=list(session_opts.keys()), 
+        format_func=lambda x: session_opts[x],
+        index=active_index
+    )
+
+    if selected_id != st.session_state.active_session_id:
+        st.session_state.active_session_id = selected_id
+        st.session_state.chat_history = session_manager.load_session(selected_id).get("chat_history", [])
+        st.rerun()
+        
+    # Export Button
+    export_data = session_manager.export_session(st.session_state.active_session_id)
+    session_name = next(
+        (s["name"] for s in sessions if s["id"] == st.session_state.active_session_id),
+        "session"
+    )
+    safe_name = session_name.replace(" ", "_").lower()
+
+    import base64
+    b64_json = base64.b64encode(export_data.encode("utf-8")).decode()
+    href = (
+        f'<a href="data:application/json;base64,{b64_json}" '
+        f'download="{safe_name}_export.json" '
+        f'style="display:inline-block; width:100%; text-align:center; padding:0.5rem 1rem; '
+        f'background-color:rgba(99, 102, 241, 0.15); border:1px solid rgba(99, 102, 241, 0.5); '
+        f'color:#e2e8f0; text-decoration:none; border-radius:8px; font-size:14px; '
+        f'margin-bottom:0.8rem;">'
+        f'⬇️ Export Session JSON</a>'
+    )
+    st.markdown(href, unsafe_allow_html=True)
+        
+    # Delete Button
+    if st.button("🗑️ Delete Session"):
+        session_manager.delete_session(st.session_state.active_session_id)
+        if "active_session_id" in st.session_state:
+            del st.session_state.active_session_id
+        st.session_state.chat_history = []
+        st.rerun()
+
+    st.markdown("---")
 
     # ── Data Sources ─────────────────────────────
     st.markdown("#### 📚 Data Sources")
@@ -385,11 +473,16 @@ with st.sidebar:
 
 
 # ──────────────────────────────────────────────
-# Session State
+# Session Initialization
 # ──────────────────────────────────────────────
 if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-
+    if "active_session_id" in st.session_state:
+        # Load from active session if present
+        import session_manager
+        session_data = session_manager.load_session(st.session_state.active_session_id)
+        st.session_state.chat_history = session_data.get("chat_history", []) if session_data else []
+    else:
+        st.session_state.chat_history = []
 
 # ──────────────────────────────────────────────
 # Rendering Helpers
@@ -406,6 +499,13 @@ def _render_entry(entry: dict):
 
     # Verification badge (if verification is done)
     report = entry.get("verification_report")
+    if report is not None:
+        # Reconstitute from dict if loaded from JSON history
+        if isinstance(report, dict):
+            try:
+                report = VerificationReport(**report)
+            except Exception:
+                report = None
     if report is not None:
         st.markdown(render_verification_badge(report), unsafe_allow_html=True)
 
@@ -459,11 +559,14 @@ if user_input:
                     enabled_sources=enabled_sources,
                     pubmed_tool_name=pubmed_tool_name,
                     pubmed_email=pubmed_email,
+                    session_id=st.session_state.active_session_id,
                 )
             except Exception as e:
+                import traceback
+                tb_str = traceback.format_exc()
                 answer = (
                     f"⚠️ **Error** — could not complete the request.\n\n"
-                    f"```\n{e}\n```\n\n"
+                    f"```\n{tb_str}\n```\n\n"
                     f"Make sure Ollama is running and `{MODEL_NAME}` is pulled."
                 )
                 source_counts = {}
@@ -543,3 +646,11 @@ if user_input:
         "reference_map": reference_map,
         "verification_report": verification_report,
     })
+    
+    # Save session
+    import session_manager
+    session_manager.save_chat_history(st.session_state.active_session_id, st.session_state.chat_history)
+    session_manager.update_session_stats(st.session_state.active_session_id, len(reference_map))
+    
+    # Rerun script to sync sidebar export button state with newly saved JSON
+    st.rerun()
