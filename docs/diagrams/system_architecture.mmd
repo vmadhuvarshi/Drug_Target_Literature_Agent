@@ -1,0 +1,59 @@
+graph TD
+    classDef ui fill:#f9f5ff,stroke:#6941c6,stroke-width:2px,color:#101828;
+    classDef agent fill:#f0f9ff,stroke:#026aa7,stroke-width:2px,color:#101828;
+    classDef data fill:#fdf4ff,stroke:#c11574,stroke-width:2px,color:#101828;
+    classDef llm fill:#ecfdf3,stroke:#027a48,stroke-width:2px,color:#101828;
+    classDef ext fill:#fff8f1,stroke:#b54708,stroke-width:2px,color:#101828,stroke-dasharray: 5 5;
+
+    subgraph User Interface Layer
+        UI[Streamlit Web App]:::ui
+    end
+
+    subgraph Agentic Orchestration Layer
+        Router[Multi-Source Router Agent]:::agent
+        Verifier[Citation Verification Agent]:::agent
+    end
+
+    subgraph Local LLM Runtime
+        Ollama[Ollama API]:::llm
+        Gemma[(Gemma 4:e2b Model)]:::llm
+    end
+
+    subgraph Session Intelligence Layer
+        SessionMgr[Session Manager]:::data
+        Chroma[(ChromaDB Vector Store)]:::data
+    end
+
+    subgraph Multi-Source Retrieval Layer
+        Federator[Parallel Retrieval Federator]:::data
+        Dedupe[Deduplication & Reranking]:::data
+    end
+
+    subgraph External Public APIs
+        EPMC[Europe PMC]:::ext
+        PubMed[PubMed NCBI]:::ext
+        CT[ClinicalTrials.gov]:::ext
+    end
+
+    UI <-->|Natural Language Query| Router
+    UI <-->|Load/Save History| SessionMgr
+
+    Router -->|Function Call Planning| Ollama
+    Router -->|Execution| Federator
+
+    Federator --> EPMC
+    Federator --> PubMed
+    Federator --> CT
+
+    EPMC & PubMed & CT --> Dedupe
+    Dedupe -->|Evidence Pack| SessionMgr
+    SessionMgr --> Chroma
+
+    Dedupe -->|Evidence Pack| Router
+    Router -->|Synthesize Final Answer| Ollama
+    Ollama <--> Gemma
+
+    Router -->|Draft Output + Evidence| Verifier
+    Verifier -->|Verification Prompt| Ollama
+    Verifier -->|Confidence Badge + Validated Claims| UI
+

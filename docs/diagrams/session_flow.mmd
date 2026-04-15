@@ -1,0 +1,20 @@
+graph LR
+    classDef ui fill:#f9f5ff,stroke:#6941c6,stroke-width:2px,color:#101828;
+    classDef agent fill:#f0f9ff,stroke:#026aa7,stroke-width:2px,color:#101828;
+    classDef cache fill:#fffaeb,stroke:#b54708,stroke-width:2px,color:#101828;
+    classDef db fill:#ecfdf3,stroke:#027a48,stroke-width:2px,color:#101828;
+
+    UI[Streamlit Client]:::ui
+    Router[Retrieval Router]:::agent
+    Ollama[Local LLM Embedding]:::agent
+    Chroma[(ChromaDB)]:::db
+    State[Local JSON State]:::cache
+
+    UI -->|Create Session| State
+    UI -->|Send Query| Router
+    Router -->|If Follow-up| Ollama
+    Ollama -->|Vectorize Query| Chroma
+    Chroma -->|Return Top N Past Evidence| Router
+    Router -->|Merge with New Search Data| UI
+    Router -->|Save New Evidence| Chroma
+    UI -->|Export Session| State

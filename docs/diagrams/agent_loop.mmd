@@ -1,0 +1,40 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant App as Streamlit UI
+    participant Agent as Routing Agent
+    participant LLM as Gemma 4 (Ollama)
+    participant Search as Retrieval Federator
+    participant Verifier as Verification Agent
+
+    User->>App: Submits clinical query
+    App->>Agent: Route query
+    
+    rect rgb(240, 249, 255)
+        note right of Agent: Phase 1: Tool Planning
+        Agent->>LLM: Send query + Tool Schemas (temperature=0.1)
+        LLM-->>Agent: JSON Tool Calls (e.g., EuropePMC, PubMed)
+    end
+    
+    rect rgb(253, 244, 255)
+        note right of Agent: Phase 2: Parallel Search
+        Agent->>Search: Execute extracted tool calls
+        Search-->>Agent: Raw JSON Responses from APIs
+        Agent->>Agent: Parse, Deduplicate, and Rerank
+        Agent->>App: Yield Source Counts (UI Badges)
+    end
+
+    rect rgb(236, 253, 243)
+        note right of Agent: Phase 3: Synthesis
+        Agent->>LLM: Send Curated Evidence Pack + Strict Rules
+        LLM-->>Agent: Synthesized text with inline citations [1]
+        Agent-->>App: Display unverified text
+    end
+
+    rect rgb(249, 245, 255)
+        note right of App: Phase 4: Verification
+        App->>Verifier: Pass Output Text + Reference Map
+        Verifier->>LLM: Validate each claim against cited source
+        LLM-->>Verifier: Validation Output (Supported, Partial, Unsupported)
+        Verifier-->>App: Render Confidence Badge
+    end

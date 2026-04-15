@@ -1,0 +1,18 @@
+architecture-beta
+    group local(cloud)[Local Regulated Environment]
+    
+    service app(server)[Streamlit Application] in local
+    service ollama(server)[Ollama Runtime] in local
+    service db(database)[ChromaDB Vector Store] in local
+    
+    group internet(cloud)[Public Network / External]
+    service ep(internet)[Europe PMC API] in internet
+    service pm(internet)[PubMed NCBI API] in internet
+    service ct(internet)[ClinicalTrials API] in internet
+
+    app:R --> L:ollama
+    app:R --> L:db
+    
+    app:T --> B:ep
+    app:T --> B:pm
+    app:T --> B:ct
