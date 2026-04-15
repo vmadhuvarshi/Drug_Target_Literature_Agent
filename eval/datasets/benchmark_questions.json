@@ -1,0 +1,411 @@
+[
+  {
+    "id": "moa_01",
+    "question": "How does Imatinib inhibit BCR-ABL kinase activity in chronic myeloid leukemia?",
+    "category": "Mechanism of action",
+    "expected_key_findings": [
+      "Imatinib inhibits the ATP-binding site of Abl/BCR-ABL tyrosine kinase and stabilizes an inactive kinase conformation.",
+      "Blocking BCR-ABL kinase activity reduces autophosphorylation and downstream proliferative and anti-apoptotic signaling.",
+      "BCR-ABL-positive leukemic cells are selectively dependent on the fusion kinase, explaining the targeted activity of imatinib.",
+      "Imatinib also inhibits related kinases such as KIT and PDGFR, which is relevant to selectivity and off-target pharmacology."
+    ],
+    "expected_sources": [
+      "DOI:10.1038/nm0596-561",
+      "PMID:11248135",
+      "DOI:10.1126/science.289.5486.1938"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "id": "moa_02",
+    "question": "How does Ibrutinib block Bruton's tyrosine kinase signaling in B-cell malignancies?",
+    "category": "Mechanism of action",
+    "expected_key_findings": [
+      "Ibrutinib is an irreversible covalent inhibitor of BTK that targets the active-site cysteine Cys481.",
+      "BTK inhibition disrupts B-cell receptor signaling, including calcium flux, NF-kB/MAPK pathway activation, adhesion, and migration signals.",
+      "The drug reduces survival and trafficking signals in malignant B cells rather than acting as nonspecific cytotoxic chemotherapy.",
+      "Clinical responses in CLL and related B-cell malignancies are consistent with dependence on BCR/BTK signaling."
+    ],
+    "expected_sources": [
+      "DOI:10.1073/pnas.1004594107",
+      "DOI:10.1056/NEJMoa1215637"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "moa_03",
+    "question": "Why are PARP inhibitors synthetically lethal in BRCA1- or BRCA2-deficient tumors?",
+    "category": "Mechanism of action",
+    "expected_key_findings": [
+      "PARP inhibition impairs repair of single-strand DNA breaks and can trap PARP-DNA complexes at sites of damage.",
+      "BRCA1/2-deficient cells cannot efficiently repair double-strand breaks by homologous recombination.",
+      "The combined PARP blockade and homologous recombination deficiency creates synthetic lethality in BRCA-mutant cancer cells.",
+      "Clinical antitumor activity of PARP inhibition is enriched in tumors with inherited or somatic BRCA defects."
+    ],
+    "expected_sources": [
+      "DOI:10.1038/nature03443",
+      "DOI:10.1038/nature03445",
+      "DOI:10.1056/NEJMoa0900212"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "id": "moa_04",
+    "question": "How does PD-1 blockade with agents such as pembrolizumab restore antitumor T-cell activity?",
+    "category": "Mechanism of action",
+    "expected_key_findings": [
+      "PD-1 is an inhibitory receptor on activated T cells that dampens effector function after ligand engagement by PD-L1 or PD-L2.",
+      "Anti-PD-1 antibodies block PD-1 ligand engagement and release inhibitory signaling in tumor-reactive T cells.",
+      "Restored T-cell activity can produce durable tumor responses, particularly in immunogenic tumors such as melanoma.",
+      "Toxicity can reflect immune activation against normal tissues, producing immune-related adverse events."
+    ],
+    "expected_sources": [
+      "DOI:10.1056/NEJMoa1200690",
+      "DOI:10.1056/NEJMoa1503093"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "moa_05",
+    "question": "How do KRAS G12C inhibitors covalently inhibit oncogenic KRAS signaling?",
+    "category": "Mechanism of action",
+    "expected_key_findings": [
+      "KRAS G12C creates a mutant cysteine that can be targeted by covalent small molecules.",
+      "Approved and investigational KRAS G12C inhibitors preferentially bind the inactive GDP-bound KRAS G12C state.",
+      "Covalent binding locks KRAS G12C in an inactive conformation and reduces downstream MAPK pathway signaling.",
+      "Because KRAS cycles between GDP and GTP states, pathway feedback and adaptive signaling can limit depth and durability of response."
+    ],
+    "expected_sources": [
+      "DOI:10.1038/nature12796",
+      "DOI:10.1038/s41586-019-1694-1",
+      "DOI:10.1056/NEJMoa2103695"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "id": "res_01",
+    "question": "What are the known resistance mechanisms to Osimertinib in EGFR-mutant non-small cell lung cancer?",
+    "category": "Drug resistance",
+    "expected_key_findings": [
+      "On-target EGFR resistance includes acquired C797S or related EGFR mutations that interfere with covalent osimertinib binding.",
+      "Off-target bypass mechanisms include MET amplification, HER2 amplification, oncogenic fusions, and downstream pathway alterations.",
+      "Histologic transformation, including small-cell transformation, is a clinically important non-genetic resistance pattern.",
+      "Loss of the original EGFR T790M clone can indicate competing EGFR-independent resistant clones and affects subsequent treatment strategy."
+    ],
+    "expected_sources": [
+      "DOI:10.1038/nm.3854",
+      "DOI:10.1001/jamaoncol.2018.2969"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "id": "res_02",
+    "question": "What mechanisms drive resistance to Imatinib in BCR-ABL-positive chronic myeloid leukemia?",
+    "category": "Drug resistance",
+    "expected_key_findings": [
+      "BCR-ABL kinase domain point mutations reduce imatinib binding and are a major cause of acquired resistance.",
+      "The T315I gatekeeper mutation is especially important because it blocks binding of several first- and second-generation inhibitors.",
+      "BCR-ABL amplification or overexpression can increase kinase signaling beyond what standard imatinib exposure suppresses.",
+      "Resistance can be polyclonal, with multiple BCR-ABL mutant subclones emerging under treatment pressure."
+    ],
+    "expected_sources": [
+      "DOI:10.1126/science.1062538",
+      "DOI:10.1016/S1535-6108(02)00096-X"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "res_03",
+    "question": "How do melanomas become resistant to BRAF inhibitors such as vemurafenib?",
+    "category": "Drug resistance",
+    "expected_key_findings": [
+      "Many resistant melanomas reactivate MAPK signaling despite continued RAF inhibition.",
+      "Resistance mechanisms include NRAS activation and receptor tyrosine kinase upregulation such as PDGFR signaling.",
+      "Aberrantly spliced BRAF V600E variants can promote RAF dimerization and reduce inhibitor sensitivity.",
+      "Resistance is heterogeneous, so combination strategies such as BRAF plus MEK inhibition are used to delay progression."
+    ],
+    "expected_sources": [
+      "DOI:10.1038/nature09626",
+      "DOI:10.1038/nature10662"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "res_04",
+    "question": "What causes resistance to PARP inhibitors in BRCA-mutated ovarian and breast cancers?",
+    "category": "Drug resistance",
+    "expected_key_findings": [
+      "Secondary BRCA1 or BRCA2 reversion mutations can restore an open reading frame and homologous recombination repair.",
+      "Restored homologous recombination reduces the synthetic lethal pressure created by PARP inhibition.",
+      "Other mechanisms include drug efflux, PARP1 alterations, replication fork protection, and restoration of DNA end resection.",
+      "Resistance mechanisms can overlap with platinum resistance because both therapies exploit homologous recombination deficiency."
+    ],
+    "expected_sources": [
+      "DOI:10.1038/nature06548",
+      "DOI:10.1038/nature06633"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "id": "res_05",
+    "question": "What resistance mutations emerge during ALK inhibitor therapy in ALK-rearranged lung cancer?",
+    "category": "Drug resistance",
+    "expected_key_findings": [
+      "Secondary ALK kinase domain mutations can cause acquired resistance to crizotinib and later-generation ALK inhibitors.",
+      "Different ALK inhibitors select for distinct mutation spectra; ALK G1202R becomes more frequent after second-generation inhibitors.",
+      "ALK amplification and bypass signaling can also contribute to resistance.",
+      "Repeat biopsy or plasma genotyping can guide choice of next-generation ALK inhibitor such as lorlatinib."
+    ],
+    "expected_sources": [
+      "DOI:10.1056/NEJMc1006448",
+      "DOI:10.1158/2159-8290.CD-16-0596"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "id": "clin_01",
+    "question": "What is the clinical evidence for combining CDK4/6 inhibitors with aromatase inhibitors in HR-positive, HER2-negative advanced breast cancer?",
+    "category": "Clinical evidence",
+    "expected_key_findings": [
+      "Palbociclib plus letrozole significantly improved progression-free survival versus letrozole alone in first-line HR-positive, HER2-negative advanced breast cancer.",
+      "Ribociclib plus letrozole improved progression-free survival in MONALEESA-2 and later showed overall survival benefit in the broader MONALEESA program.",
+      "Abemaciclib plus a nonsteroidal aromatase inhibitor improved progression-free survival in MONARCH 3.",
+      "The class toxicity profile includes neutropenia for palbociclib/ribociclib and more diarrhea with abemaciclib, requiring monitoring and dose management."
+    ],
+    "expected_sources": [
+      "DOI:10.1056/NEJMoa1607303",
+      "DOI:10.1056/NEJMoa1609709",
+      "DOI:10.1200/JCO.2017.75.6155"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "id": "clin_02",
+    "question": "What clinical evidence supports PARP inhibitors as maintenance therapy in BRCA-mutated ovarian cancer?",
+    "category": "Clinical evidence",
+    "expected_key_findings": [
+      "SOLO1 showed that maintenance olaparib markedly prolonged progression-free survival after response to first-line platinum chemotherapy in BRCA-mutated advanced ovarian cancer.",
+      "Earlier maintenance studies in platinum-sensitive relapsed ovarian cancer showed benefit for olaparib compared with placebo.",
+      "PARP inhibitor maintenance benefit is strongest in BRCA-mutated or homologous recombination deficient disease, though some agents show broader activity.",
+      "Key safety issues include anemia, fatigue, nausea, thrombocytopenia for some agents, and rare myelodysplastic syndrome or acute myeloid leukemia."
+    ],
+    "expected_sources": [
+      "DOI:10.1056/NEJMoa1810858",
+      "DOI:10.1056/NEJMoa1105535",
+      "DOI:10.1056/NEJMoa1910962"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "clin_03",
+    "question": "What clinical evidence supports PD-1 inhibitors in advanced melanoma?",
+    "category": "Clinical evidence",
+    "expected_key_findings": [
+      "Early anti-PD-1 trials showed durable objective responses in a subset of patients with advanced melanoma.",
+      "KEYNOTE-006 showed pembrolizumab improved survival outcomes compared with ipilimumab in advanced melanoma.",
+      "Nivolumab trials also showed improved outcomes versus chemotherapy or CTLA-4 blockade in appropriate melanoma populations.",
+      "Responses can be durable, but immune-related adverse events require monitoring and management."
+    ],
+    "expected_sources": [
+      "DOI:10.1056/NEJMoa1200690",
+      "DOI:10.1056/NEJMoa1503093",
+      "PMID:25399552"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "clin_04",
+    "question": "What evidence established Osimertinib as first-line therapy for EGFR-mutated advanced non-small cell lung cancer?",
+    "category": "Clinical evidence",
+    "expected_key_findings": [
+      "The FLAURA trial compared first-line osimertinib with first-generation EGFR TKIs in EGFR-mutated advanced NSCLC.",
+      "Osimertinib significantly improved progression-free survival compared with gefitinib or erlotinib.",
+      "Final overall survival analysis showed an overall survival advantage for osimertinib.",
+      "Osimertinib has central nervous system activity and a toxicity profile that contributed to adoption as a preferred first-line option."
+    ],
+    "expected_sources": [
+      "DOI:10.1056/NEJMoa1713137",
+      "DOI:10.1056/NEJMoa1913662"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "id": "clin_05",
+    "question": "What is the clinical evidence for adding pertuzumab to trastuzumab and docetaxel in HER2-positive metastatic breast cancer?",
+    "category": "Clinical evidence",
+    "expected_key_findings": [
+      "CLEOPATRA tested pertuzumab plus trastuzumab plus docetaxel versus trastuzumab plus docetaxel in first-line HER2-positive metastatic breast cancer.",
+      "Adding pertuzumab significantly improved progression-free survival.",
+      "Longer follow-up showed a clinically meaningful overall survival benefit.",
+      "Dual HER2 blockade increases some toxicities such as diarrhea and rash but did not show a large increase in symptomatic cardiac dysfunction in the pivotal trial."
+    ],
+    "expected_sources": [
+      "DOI:10.1056/NEJMoa1113216",
+      "DOI:10.1056/NEJMoa1413513"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "id": "safe_01",
+    "question": "What are the known cardiotoxicity risks associated with Trastuzumab?",
+    "category": "Safety/Adverse events",
+    "expected_key_findings": [
+      "Trastuzumab can cause asymptomatic left ventricular ejection fraction decline and clinical heart failure.",
+      "Cardiotoxicity risk is higher when trastuzumab is combined with or sequenced close to anthracyclines.",
+      "Unlike anthracycline injury, trastuzumab cardiotoxicity is often at least partially reversible with drug interruption and cardiac therapy.",
+      "Baseline and serial cardiac monitoring are standard risk mitigation strategies during treatment."
+    ],
+    "expected_sources": [
+      "DOI:10.1056/NEJM200103153441101",
+      "DOI:10.1200/JCO.2002.20.5.1215",
+      "DOI:10.1056/NEJMoa052122"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "id": "safe_02",
+    "question": "What mechanisms and clinical risk factors underlie anthracycline-associated cardiotoxicity?",
+    "category": "Safety/Adverse events",
+    "expected_key_findings": [
+      "Anthracycline cardiotoxicity is dose-related and can lead to irreversible cardiomyopathy and heart failure.",
+      "Topoisomerase II beta in cardiomyocytes is implicated in doxorubicin-induced DNA damage and mitochondrial dysfunction.",
+      "Risk increases with higher cumulative dose, prior cardiac disease, older age, mediastinal radiation, and concurrent cardiotoxic therapy.",
+      "Dexrazoxane and careful cumulative-dose management can reduce risk in selected patients."
+    ],
+    "expected_sources": [
+      "DOI:10.1038/nm.2919",
+      "DOI:10.1002/cncr.11407"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "safe_03",
+    "question": "What severe immune-related adverse events are associated with immune checkpoint inhibitors?",
+    "category": "Safety/Adverse events",
+    "expected_key_findings": [
+      "Checkpoint inhibitors can cause immune-related adverse events affecting skin, gastrointestinal tract, liver, endocrine organs, lungs, heart, and nervous system.",
+      "Combination CTLA-4 plus PD-1 blockade generally increases frequency and severity of immune-related toxicity.",
+      "Myocarditis is uncommon but can be rapidly fatal and may occur with myositis or conduction disease.",
+      "Management depends on severity and often includes treatment interruption, corticosteroids, and additional immunosuppression for refractory severe events."
+    ],
+    "expected_sources": [
+      "DOI:10.1056/NEJMc1609215",
+      "PMID:29567210",
+      "DOI:10.1001/jamaoncol.2018.3923"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "id": "safe_04",
+    "question": "What adverse event risks are associated with EGFR inhibitors such as erlotinib or cetuximab?",
+    "category": "Safety/Adverse events",
+    "expected_key_findings": [
+      "Common EGFR inhibitor toxicities include acneiform rash, xerosis, pruritus, paronychia, diarrhea, and mucositis.",
+      "Skin toxicity reflects EGFR inhibition in keratinocytes and hair follicles, not just an allergic reaction.",
+      "Rash severity has been associated with EGFR inhibitor exposure and sometimes with clinical response.",
+      "Management includes skin prophylaxis, topical or oral antibiotics, corticosteroids, dose modification, and monitoring for severe reactions."
+    ],
+    "expected_sources": [
+      "DOI:10.1038/nrc1970",
+      "DOI:10.1056/NEJMoa050753"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "safe_05",
+    "question": "What are the main cytokine release syndrome and neurotoxicity risks of CD19 CAR-T cell therapy?",
+    "category": "Safety/Adverse events",
+    "expected_key_findings": [
+      "CD19 CAR-T therapy can produce cytokine release syndrome with fever, hypotension, hypoxia, and organ dysfunction.",
+      "Severe CRS is associated with high inflammatory cytokines such as IL-6 and is treated with supportive care and IL-6 pathway blockade such as tocilizumab.",
+      "Immune effector cell-associated neurotoxicity can include encephalopathy, aphasia, seizures, cerebral edema in rare cases, and requires close monitoring.",
+      "Toxicity risk correlates with disease burden, CAR-T expansion, and intensity of immune activation."
+    ],
+    "expected_sources": [
+      "DOI:10.1056/NEJMoa1407222",
+      "DOI:10.1182/blood-2014-05-552729",
+      "DOI:10.1038/nrclinonc.2017.148"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "emerge_01",
+    "question": "What is the current evidence for KRAS G12C inhibitors in non-small cell lung cancer?",
+    "category": "Emerging targets",
+    "expected_key_findings": [
+      "Sotorasib demonstrated objective responses and durable disease control in previously treated KRAS G12C-mutant NSCLC.",
+      "Adagrasib also showed clinically meaningful response rates and intracranial activity in KRAS G12C-mutant NSCLC.",
+      "Common toxicities include diarrhea, nausea, fatigue, hepatotoxicity, and treatment interruptions or dose reductions in some patients.",
+      "Acquired resistance can arise through secondary KRAS alterations, bypass pathway activation, and histologic or phenotypic changes."
+    ],
+    "expected_sources": [
+      "DOI:10.1056/NEJMoa2103695",
+      "DOI:10.1056/NEJMoa2204619"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "emerge_02",
+    "question": "What evidence supports HER2-low breast cancer as a target for trastuzumab deruxtecan?",
+    "category": "Emerging targets",
+    "expected_key_findings": [
+      "HER2-low disease is defined by low but detectable HER2 expression, typically IHC 1+ or IHC 2+ with negative ISH.",
+      "Trastuzumab deruxtecan is an antibody-drug conjugate that can exploit low HER2 expression and bystander payload activity.",
+      "DESTINY-Breast04 showed improved progression-free and overall survival versus physician's choice chemotherapy in previously treated HER2-low metastatic breast cancer.",
+      "Interstitial lung disease or pneumonitis is a key serious toxicity that requires monitoring and early intervention."
+    ],
+    "expected_sources": [
+      "DOI:10.1056/NEJMoa2203690",
+      "DOI:10.1056/NEJMoa1914510"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "emerge_03",
+    "question": "What is the clinical evidence for targeting TROP2 with sacituzumab govitecan in metastatic triple-negative breast cancer?",
+    "category": "Emerging targets",
+    "expected_key_findings": [
+      "Sacituzumab govitecan is a TROP2-directed antibody-drug conjugate carrying the SN-38 payload.",
+      "The ASCENT trial showed improved progression-free survival and overall survival compared with single-agent chemotherapy in previously treated metastatic triple-negative breast cancer.",
+      "Responses were observed in a population with limited treatment options after multiple prior lines of therapy.",
+      "Important toxicities include neutropenia, diarrhea, nausea, alopecia, and the need for growth factor or dose management in some patients."
+    ],
+    "expected_sources": [
+      "DOI:10.1056/NEJMoa2028485",
+      "DOI:10.1056/NEJMoa1814213"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "emerge_04",
+    "question": "What evidence supports CLDN18.2 as a therapeutic target in gastric and gastroesophageal junction cancer?",
+    "category": "Emerging targets",
+    "expected_key_findings": [
+      "CLDN18.2 is a tight junction protein isoform with tumor-restricted surface expression in a subset of gastric and gastroesophageal junction adenocarcinomas.",
+      "Zolbetuximab is a CLDN18.2-targeting monoclonal antibody designed to kill CLDN18.2-positive tumor cells through immune effector mechanisms.",
+      "SPOTLIGHT showed zolbetuximab plus mFOLFOX6 improved progression-free and overall survival versus placebo plus chemotherapy in CLDN18.2-positive, HER2-negative disease.",
+      "GLOW provided additional phase 3 support with zolbetuximab plus CAPOX in a similar biomarker-selected population."
+    ],
+    "expected_sources": [
+      "DOI:10.1016/S0140-6736(23)00620-7",
+      "DOI:10.1038/s41591-023-02465-7"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "id": "emerge_05",
+    "question": "What is the evidence for menin inhibitors in KMT2A-rearranged or NPM1-mutant acute leukemia?",
+    "category": "Emerging targets",
+    "expected_key_findings": [
+      "KMT2A-rearranged and NPM1-mutant leukemias depend on menin-KMT2A-associated transcriptional programs including HOXA/MEIS1 expression.",
+      "Revumenib and related menin inhibitors disrupt the menin-KMT2A interaction and can induce differentiation and clinical remissions.",
+      "Early clinical data show responses in heavily pretreated acute leukemia, including molecular or measurable residual disease responses in some patients.",
+      "Resistance can emerge through MEN1 mutations that impair inhibitor binding, supporting the need for sequencing at relapse."
+    ],
+    "expected_sources": [
+      "DOI:10.1038/s41586-023-05812-3",
+      "DOI:10.1038/s41586-023-05755-9"
+    ],
+    "difficulty": "hard"
+  }
+]

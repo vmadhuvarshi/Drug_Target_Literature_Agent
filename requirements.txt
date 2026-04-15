@@ -3,3 +3,4 @@ ollama
 requests
 pydantic
 chromadb
+matplotlib

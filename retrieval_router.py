@@ -27,7 +27,7 @@ SOURCE_DISPLAY_ORDER = [
     "PubMed",
     "ClinicalTrials.gov",
 ]
-DEFAULT_LIMIT = 5
+DEFAULT_LIMIT = 10
 MAX_SELECTED_EVIDENCE = 8
 MAX_SYNTHESIS_ATTEMPTS = 3
 MAX_RESERVED_TRIALS = 3
@@ -56,14 +56,15 @@ FINAL_SYNTHESIS_PROMPT = (
     "OUTPUT CONTRACT:\n"
     "1. Start with a direct answer to the user's question.\n"
     "2. Synthesize across evidence; do not summarize one citation at a time.\n"
-    "3. Use short sections when helpful, especially for published evidence and "
+    "3. Ensure your clinical synthesis explicitly covers efficacy outcomes, resistance mechanisms, side effects, and trial progression if mentioned in the evidence.\n"
+    "4. Use short sections when helpful, especially for published evidence and "
     "clinical-trial evidence.\n"
-    "4. Every factual paragraph or bullet must include inline citations like [1], [3].\n"
-    "5. If clinical-trial records are included and relevant, discuss them explicitly.\n"
-    "6. If evidence is limited or conflicting, say so clearly.\n"
-    "7. Do not apologize, refuse, or say that evidence is missing unless the pack "
+    "5. Every factual paragraph or bullet must include inline citations like [1], [3].\n"
+    "6. If clinical-trial records are included and relevant, discuss them explicitly.\n"
+    "7. If evidence is limited or conflicting, say so clearly.\n"
+    "8. Do not apologize, refuse, or say that evidence is missing unless the pack "
     "itself lacks the requested evidence.\n"
-    "8. Do not output a References section.\n"
+    "9. Do not output a References section.\n"
 )
 
 # ──────────────────────────────────────────────

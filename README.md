@@ -63,6 +63,27 @@ streamlit run app.py
 - *Summarise clinical evidence for CDK4/6 inhibitors in HR+ breast cancer.*
 - *Are there any ongoing clinical trials for CAR-T therapy in glioblastoma?*
 
+## Evaluation Harness
+
+Run the benchmark suite after Ollama is running and dependencies are installed:
+
+```bash
+pip install -r requirements.txt
+bash run_eval.sh
+```
+
+The harness evaluates 25 curated drug-target questions across mechanism,
+resistance, clinical evidence, safety, and emerging-target categories. Results
+are timestamped under `eval/results/` as JSON, Markdown, CSV, and a radar chart.
+
+Useful filters:
+
+```bash
+bash run_eval.sh --question-id moa_01
+bash run_eval.sh --category "Clinical evidence"
+make eval
+```
+
 ## License
 
 MIT
