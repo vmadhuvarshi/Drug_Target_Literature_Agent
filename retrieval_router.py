@@ -806,15 +806,75 @@ def _call_source(fn_name: str, query: str, limit: int,
 
 
 def _plan_tool_calls(user_query: str, tools: list[dict]) -> dict[str, dict]:
-    """Ask the model for source-specific search queries."""
-    response = _chat(
-        messages=[
-            {"role": "system", "content": ROUTER_SYSTEM_PROMPT},
-            {"role": "user", "content": user_query},
-        ],
-        tools=tools,
-        options=ROUTING_OPTIONS,
+    """Ask the model for source-specific search queries.
+
+    First attempts native Ollama tool calling. If the model does not support
+    tools (e.g. DeepSeek-R1), falls back to a prompt-based JSON approach.
+    """
+    import json as _json
+
+    # ── Attempt 1: Native tool calling ────────────
+    try:
+        response = _chat(
+            messages=[
+                {"role": "system", "content": ROUTER_SYSTEM_PROMPT},
+                {"role": "user", "content": user_query},
+            ],
+            tools=tools,
+            options=ROUTING_OPTIONS,
+        )
+        planned_calls = _parse_tool_call_response(response)
+        if planned_calls:
+            return planned_calls
+    except Exception:
+        pass  # Fall through to prompt-based fallback
+
+    # ── Attempt 2: Prompt-based JSON fallback ─────
+    tool_names = [t["function"]["name"] for t in tools if "function" in t]
+    fallback_prompt = (
+        "You are a clinical research routing agent. Given the user's query, "
+        "return a JSON object mapping each relevant source function to a search "
+        "query string. Use only these function names: "
+        f"{', '.join(tool_names)}.\n\n"
+        "Example output:\n"
+        '{"search_europe_pmc": "imatinib BCR-ABL resistance", '
+        '"search_pubmed": "imatinib BCR-ABL CML resistance mechanisms"}\n\n'
+        "Return ONLY the JSON object, no other text."
     )
+    try:
+        response = _chat(
+            messages=[
+                {"role": "system", "content": fallback_prompt},
+                {"role": "user", "content": user_query},
+            ],
+            options=ROUTING_OPTIONS,
+        )
+        content = response.get("message", {}).get("content", "")
+        # Strip <think>...</think> blocks from reasoning models
+        content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+        # Extract JSON from the response
+        json_match = re.search(r"\{[^{}]+\}", content)
+        if json_match:
+            parsed = _json.loads(json_match.group())
+            planned_calls: dict[str, dict] = {}
+            for fn_name, query_val in parsed.items():
+                if fn_name in FUNCTION_DISPATCH:
+                    planned_calls[fn_name] = {
+                        "query": str(query_val) if query_val else user_query,
+                        "limit": DEFAULT_LIMIT,
+                    }
+            if planned_calls:
+                return planned_calls
+    except Exception:
+        pass
+
+    # ── Attempt 3: Use raw query for all sources ──
+    return {fn: {"query": user_query, "limit": DEFAULT_LIMIT} for fn in tool_names if fn in FUNCTION_DISPATCH}
+
+
+def _parse_tool_call_response(response: dict) -> dict[str, dict]:
+    """Parse a native tool-call response into planned_calls dict."""
+    import json as _json
 
     planned_calls: dict[str, dict] = {}
     tool_calls = response.get("message", {}).get("tool_calls") or []
@@ -824,22 +884,21 @@ def _plan_tool_calls(user_query: str, tools: list[dict]) -> dict[str, dict]:
         fn_name = tool_call["function"].get("name")
         if not fn_name:
             continue
-            
+
         raw_args = tool_call["function"].get("arguments", {}) or {}
         args = {}
         if isinstance(raw_args, str):
             try:
-                import json
-                parsed = json.loads(raw_args)
+                parsed = _json.loads(raw_args)
                 if isinstance(parsed, dict):
                     args = parsed
-            except:
+            except Exception:
                 pass
         elif isinstance(raw_args, dict):
             args = raw_args
-            
+
         planned_calls[fn_name] = {
-            "query": args.get("query", user_query) if isinstance(args, dict) else user_query,
+            "query": args.get("query", "") if isinstance(args, dict) else "",
             "limit": args.get("limit", DEFAULT_LIMIT) if isinstance(args, dict) else DEFAULT_LIMIT,
         }
     return planned_calls
