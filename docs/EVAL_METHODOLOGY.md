@@ -1,50 +1,49 @@
-# Evaluation Methodology in Regulated Contexts
+# Evaluation Methodology
 
-In enterprise, heavily regulated settings such as clinical and pharmaceutical tech, deterministic software controls are legally and functionally mandated. Generative AI fundamentally introduces non-deterministic outputs. Therefore, **you cannot deploy what you cannot systematically measure.**
+Regulated industries require measurable, reproducible validation of any tool used in their workflows. Generative AI introduces non-deterministic outputs, which means **you can't deploy what you can't systematically measure.**
 
-The automated evaluation harness provides mathematical, time-stamped rigor directly against the agentic retrieval architecture, scoring pipeline iterations to ensure hallucination rates do not drift.
+The evaluation harness provides automated, reproducible scoring against the agentic retrieval pipeline, tracking whether hallucination rates drift as you iterate on prompts, models, or retrieval strategies.
 
-## Evaluated Dimensions and Metrics
+## Metrics
 
-The benchmark mathematically evaluates the underlying agent across 5 isolated dimensions:
+The benchmark measures the agent across five dimensions:
 
 1. **Retrieval Precision (LLM as a judge)**
-   - *What it measures:* The fraction of the evidence pulled by the search APIs that was actually clinically relevant to the drug and target in question.
-   - *Why it matters:* Poor precision indicates the routing agent generated bad tool calls, burying the LLM context window in noise and reducing synthesis quality.
+   - *What it measures:* The fraction of retrieved papers that are actually relevant to the question being asked.
+   - *Why it matters:* Low precision means the routing agent generated poor search queries, filling the context window with noise and degrading synthesis quality.
 
 2. **Retrieval Recall (Pattern Matching)**
-   - *What it measures:* Whether the search results contain specific landmark identifiers (like DOIs or PMIDs) expected to be found for a baseline understanding of the question.
-   - *Why it matters:* Ensures the LLM is synthesizing over comprehensive literature rather than missing the underlying gold-standard papers.
+   - *What it measures:* Whether the retrieved results contain specific landmark papers (identified by DOI or PMID) that should appear for a given topic.
+   - *Why it matters:* Ensures the synthesis is built on comprehensive literature, not just whatever the API happened to return first.
 
 3. **Citation Accuracy (Deterministic Parse)**
-   - *What it measures:* Verifies that every single bracketed citation (e.g., `[1]`) corresponds to a valid document index injected during that specific run.
-   - *Why it matters:* Stops the model from faking citations or fabricating index numbers, a common failure mode in retrieval generation.
+   - *What it measures:* Whether every bracketed citation (e.g., `[1]`) maps to a real document in the reference list for that run.
+   - *Why it matters:* Catches fabricated citations — a common failure mode in retrieval-augmented generation.
 
 4. **Factual Coverage (LLM as a judge)**
-   - *What it measures:* Grades whether the final synthesized output explicitly explicitly covered every single underlying clinical observation expected for the topic.
-   - *Why it matters:* Over-constrained LLMs frequently drop critical nuance such as adverse events or mild resistance trends in shorter output responses.
+   - *What it measures:* Whether the synthesized response covers all the key clinical findings expected for the topic.
+   - *Why it matters:* LLMs frequently drop important nuance (adverse events, resistance subtypes, dosing details) in shorter responses.
 
 5. **Hallucination Control (LLM as a judge)**
-   - *What it measures:* Extracts only claims that carry inline citations (e.g., sentences containing `[1]` or `[3]`) and scores whether each claim is topically consistent with the cited paper's title and abstract. Scored initially as a rate, and converted to a 'control' ratio `(1.0 - rate)` for the composite graph.
-   - *Why it matters:* This acts as the final gatekeeper for generative accuracy. By evaluating only cited claims, the metric avoids false positives from correct parametric knowledge used in connecting prose.
+   - *What it measures:* Extracts only claims that carry inline citations (sentences containing `[1]`, `[3]`, etc.) and checks whether each claim is topically consistent with the cited paper's title and abstract. Scored as a rate, then converted to a control ratio `(1.0 - rate)` for the composite.
+   - *Why it matters:* This is the final accuracy gatekeeper. By evaluating only cited claims, the metric avoids false positives from correct background knowledge the model uses in connecting prose.
 
-## Interpreting Benchmark Results
+## Interpreting Results
 
-Results are saved to `eval/results/` and visualized automatically onto a radar chart interface located through the UI's Evaluations dashboard.
+Results are saved to `eval/results/` and visualized as a radar chart in the Evaluations dashboard.
 
-- **Baseline:** With `deepseek-r1:8b` and citation-sorted retrieval, expect composite reliability scores in the 0.8–1.0 range for well-known drug-target topics. Models with weaker structured-output capabilities may produce lower Retrieval Precision due to malformed JSON judge responses.
-- **Composite Reliability:** A blended aggregate mathematical score merging all 5 metrics equally. High 0.8+ suggests enterprise-readiness on the specific scenario base.
+- **Baseline expectations:** Composite reliability scores will vary significantly by model size. A 4B model (Gemma 4) will typically score 0.5–0.8 on well-known drug-target topics. A 70B model will score higher. This is expected — the architecture is model-agnostic, so you can upgrade the model without changing anything else.
+- **Composite Reliability:** An equally-weighted average of all five metrics. Scores above 0.8 indicate strong performance for the given model and domain.
 
 ## Landmark Paper Lookup
 
-The benchmark dataset specifies `expected_sources` (landmark DOIs and PMIDs) for each question. Since keyword search may not always surface specific older papers, the harness includes a **direct-lookup fallback** (`sources/doi_lookup.py`) that fetches missing expected identifiers via the Europe PMC and PubMed APIs. These papers are injected into the retrieved pool *before* scoring, ensuring retrieval recall fairly measures the pipeline's coverage capabilities rather than API search ranking behavior.
+The benchmark dataset specifies `expected_sources` (landmark DOIs and PMIDs) for each question. Since keyword search may not always surface specific older papers, the harness includes a **direct-lookup fallback** (`sources/doi_lookup.py`) that fetches missing expected papers via the Europe PMC and PubMed APIs. These are injected into the pool before scoring, so retrieval recall measures the pipeline's coverage fairly rather than penalizing API search ranking behavior.
 
-This fallback is **benchmark-only** and does not affect the live Streamlit application.
+This fallback is **benchmark-only** and does not affect the live application.
 
 ## Extending the Harness
 
-The JSON structure housing the evaluations (`eval/datasets/benchmark_questions.json`) is fully customizable.
-When adapting this pattern for unique architectures (like Pharmacovigilance), you should delete the default clinical trial questions and write scenarios matching your specific evaluation standards:
+The benchmark dataset (`eval/datasets/benchmark_questions.json`) is fully customizable. To adapt for a different domain (e.g., pharmacovigilance), replace the default questions with scenarios matching your evaluation needs:
 
 ```json
 {
@@ -56,4 +55,5 @@ When adapting this pattern for unique architectures (like Pharmacovigilance), yo
   "difficulty": "medium"
 }
 ```
-Run `python -m eval.benchmark` sequentially after altering the dataset to instantly assess your new domain adjustments.
+
+Run `python -m eval.benchmark` after editing the dataset to score your changes immediately.

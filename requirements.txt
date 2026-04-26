@@ -4,3 +4,4 @@ requests
 pydantic
 chromadb
 matplotlib
+python-dotenv

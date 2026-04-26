@@ -1,55 +1,64 @@
-# Reference Architecture: IP-Safe Agentic Retrieval
+# Architecture: IP-Safe Agentic Retrieval
 
-This document outlines the architectural blueprint for deploying agentic retrieval systems in heavily regulated environments (Pharmaceuticals, Biotechnology, Healthcare) where Intellectual Property (IP) sensitivity and data sovereignty are paramount.
+How this system works, why it's built this way, and where the security boundaries are.
 
-## Problem Statement
-In pre-IND (Investigational New Drug) research, competitive intelligence, and early-stage target discovery, pharmaceutical companies cannot risk querying cloud-based Large Language Models. Doing so poses a severe risk of IP leakage: sending proprietary chemical structures, unpatented biological targets, or strategic research queries to external third-party models could expose a company's confidential R&D pipeline.
+## Problem
 
-However, researchers still need the synthesis, extraction, and reasoning capabilities of modern LLMs to navigate massive swaths of biomedical literature.
+A researcher exploring an unpatented kinase target can't type that query into a cloud LLM without potentially exposing their R&D direction to the model provider. The same applies to competitive intelligence queries, pre-IND compound names, and any unpublished biological hypothesis. Legal and InfoSec teams in pharma increasingly block cloud LLM tools for this reason.
 
-**The Solution:** A 100% locally homed, air-gapped LLM runtime paired with deterministic federated search plugins. The LLM processes all data internally, while only highly regulated, anonymized keyword searches cross the network boundary to public databases.
+Researchers still need LLM-grade synthesis to navigate the biomedical literature efficiently. The question is whether you can get that capability without sending sensitive queries off-network.
 
-## Architecture Overview
-The system is built as a generic abstraction consisting of five distinct layers:
+**This system's answer:** run the LLM locally. The only data that leaves the machine is a search keyword hitting a public API — the same kind of request PubMed has processed from browsers for decades.
+
+## Five-Layer Architecture
 
 ### 1. Local LLM Runtime
-The foundational engine running the open-weights models (`deepseek-r1:8b`). Executed via `Ollama`, this layer ensures that all natural language understanding, generative output, and tool-call planning occur purely within the enterprise perimeter.
 
-### 2. Agentic Orchestration Layer
-A deterministic routing script that prompts the LLM with a list of available search tools. Using strict JSON schemas, the LLM decides *which* databases to query and *how* to construct the search strings based on the user's input, without directly synthesizing the final answer yet.
+Ollama runs Gemma 4 locally. All reasoning, synthesis, and tool-call planning happen on the researcher's machine — nothing is sent to an external model provider. The model is configured in `models/config.py` and can be swapped via the `OLLAMA_MODEL` environment variable.
 
-### 3. Multi-Source Retrieval Layer
-The execution boundary. Python functions execute the LLM's planned JSON queries against parallel APIs (e.g., Europe PMC, PubMed, ClinicalTrials.gov). Europe PMC results are sorted by citation count (`sort=cited`) and PubMed results by relevance score (`sort=relevance`), ensuring landmark papers surface alongside recent publications. Responses are parsed, deeply aggregated, and deduplicated before being passed back *into* the local LLM's context window.
+### 2. Routing Agent
 
-### 4. Session Intelligence Layer
-Uses a local Vector Database (`ChromaDB`) to persist retrieved abstracts and trial records tied to a unique session ID. This allows for persistent "Session Memory" where researchers can query follow-up questions mathematically linked to prior outputs without repeatedly hitting external APIs.
+The retrieval router (`retrieval_router.py`) prompts the LLM with a list of available search tools using function calling. The model decides which databases to query and how to phrase the search, without generating the final answer yet. If the model doesn't support function calling natively, the router falls back to a prompt-based JSON approach.
 
-### 5. Quality Assurance (Verification) Layer
-Due to the non-deterministic nature of generative models, a parallel Verification Agent extracts every factual claim made in the generated synthesis. It compares each claim against the specific retrieved abstracts cited, producing a confidence badge and forcing the application to be transparent about its sources.
+### 3. Multi-Source Retrieval
+
+Python functions execute the planned queries against public APIs: Europe PMC, PubMed, and ClinicalTrials.gov. Europe PMC results are sorted by citation count (`sort=cited`) and PubMed by relevance score (`sort=relevance`), so landmark papers surface alongside recent publications. Results are parsed, deduplicated, and reranked before being loaded into the LLM's context window.
+
+### 4. Session Memory
+
+A local ChromaDB vector store persists retrieved abstracts and trial records tied to a session ID. This gives researchers persistent context — follow-up questions can draw on semantically related prior results without re-querying the external APIs.
+
+### 5. Citation Verification
+
+A second-pass verification agent extracts every cited claim from the synthesis and checks whether the cited paper's abstract actually supports it. The result is a confidence badge shown in the UI. This doesn't guarantee correctness, but it catches obvious hallucinations and fabricated citations.
 
 ---
 
 ## Data Flow
-1. **Input Submission:** A researcher submits query: *"What are the resistance patterns for Imatinib?"*
-2. **Orchestration (Tooling):** The Router Agent analyzes the request and generates a JSON function call array limiting queries to `EuropePMC` and `ClinicalTrials`.
-3. **Retrieval (Network Boundary):** The system connects to the external REST APIs, fetching the top 10 results from both sources.
-4. **Context Injection:** Raw JSON is standardized into a localized markdown format ("Evidence Pack") and cached to ChromaDB.
-5. **Synthesis:** The evidence pack is pushed to the local LLM alongside the original query. The LLM generates a comprehensive response heavily punctuated with inline citations (e.g., `[1]`, `[3]`).
-6. **Validation:** In the background, the Verification Agent slices the synthesis by citation indices and mathematically scores whether the provided text aligns with the cited context.
+
+1. **Query:** Researcher asks *"What are the resistance patterns for Imatinib?"*
+2. **Routing:** The agent generates function calls targeting Europe PMC + ClinicalTrials.gov.
+3. **Retrieval:** HTTP requests go to the public APIs. Only search keywords leave the machine.
+4. **Evidence packing:** Raw API responses are standardized, deduplicated, and cached to ChromaDB.
+5. **Synthesis:** The evidence pack + original query go to the local LLM. It generates a response with inline citations (`[1]`, `[3]`).
+6. **Verification:** The verification agent checks each cited claim against the source abstract and produces a confidence score.
 
 ## Security Model
-**Strict Boundary Constraints:**
-- **Inbound Data:** Only public abstracts and metadata are pulled from standard REST endpoints.
-- **Outbound Data:** Only keyword strings (parsed and minimized by the Router Agent) leave the network.
-- **LLM Context:** No search histories or generation logs are exposed externally. Inference bounds are locked entirely within the host GPU/CPU via Ollama.
 
-## Extensibility Points
-This pattern is designed to be easily modified for internal systems:
-- **Internal Document Stores:** External APIs (`pubmed.py`) can be seamlessly swapped out with Elasticsearch or internal document embeddings referencing proprietary, in-house PDFs.
-- **Verification Rules:** The `verification_agent.py` can be extended to utilize custom enterprise rulebooks or regulatory alignment checks.
-- **Model Swaps:** The infrastructure leverages an abstract Ollama client, meaning `llama3`, `mistral`, or any other high-capability open-weight model can drop in seamlessly.
+The only outbound traffic is HTTP GET requests to public APIs (Europe PMC, PubMed, ClinicalTrials.gov) containing search keywords. No prompt text, no synthesized output, no session history leaves the machine.
+
+- **Inbound:** Public abstracts and metadata from standard REST endpoints.
+- **Outbound:** Keyword search strings only, constructed by the routing agent.
+- **LLM context:** Stays entirely within the local Ollama process. No logs, prompts, or completions are transmitted externally.
+
+## Extensibility
+
+- **Internal document stores:** Replace the `sources/` modules with Elasticsearch, Milvus, or any internal search API. The router doesn't care where the evidence comes from as long as it follows the standard schema.
+- **Verification rules:** Extend `verification_agent.py` with domain-specific checks (regulatory alignment, adverse event detection, etc.).
+- **Model swaps:** Change `OLLAMA_MODEL` in environment or config. The architecture is model-agnostic — `llama3`, `mistral`, `gemma`, or any Ollama-supported model works.
 
 ## Trade-offs & Limitations
-- **Hardware Bottlenecks:** Local LLMs demand extensive, dedicated accelerated compute architectures (GPUs/NPU clusters).
-- **Latency:** Because routing, parsing, synthetic generation, and post-verification happen sequentially and locally, responses often take anywhere from 10 to 60 seconds.
-- **Retrieval Ceiling:** The agent's knowledge mapping relies heavily on the quality of basic Keyword APIs; without semantic internal graph representations, it may occasionally fail to fetch hyper-specific studies unless exact keyword matches happen.
+
+- **Model quality vs. privacy:** Local models at 4B parameters produce noticeably weaker synthesis than GPT-4-class models. For production use, run a larger model (70B+) on a GPU server. The architecture doesn't change.
+- **Latency:** Routing, retrieval, synthesis, and verification all run sequentially and locally. Expect 15–60 seconds per query depending on model size and hardware.
+- **Retrieval ceiling:** The agent relies on keyword search against public APIs. It will miss papers that don't match the keywords, and can't access paywalled full text. For specific known papers, the benchmark uses a DOI/PMID direct-lookup fallback.

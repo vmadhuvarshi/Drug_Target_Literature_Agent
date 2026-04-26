@@ -19,8 +19,11 @@ env/
 .DS_Store
 Thumbs.db
 
-# Streamlit
+# Streamlit config — theme is handled via CSS injection in app.py
 .streamlit/
+
+# Environment
+.env
 
 # Misc
 *.log

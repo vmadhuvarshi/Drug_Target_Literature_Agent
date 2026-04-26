@@ -809,7 +809,7 @@ def _plan_tool_calls(user_query: str, tools: list[dict]) -> dict[str, dict]:
     """Ask the model for source-specific search queries.
 
     First attempts native Ollama tool calling. If the model does not support
-    tools (e.g. DeepSeek-R1), falls back to a prompt-based JSON approach.
+    tools, falls back to a prompt-based JSON approach.
     """
     import json as _json
 
@@ -850,7 +850,9 @@ def _plan_tool_calls(user_query: str, tools: list[dict]) -> dict[str, dict]:
             options=ROUTING_OPTIONS,
         )
         content = response.get("message", {}).get("content", "")
-        # Strip <think>...</think> blocks from reasoning models
+        # Compatibility safeguard: strip <think>...</think> blocks that
+        # reasoning models (e.g. DeepSeek-R1) wrap around their output.
+        # Gemma 4 doesn't produce these, but keeping this is defensive.
         content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
         # Extract JSON from the response
         json_match = re.search(r"\{[^{}]+\}", content)

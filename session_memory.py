@@ -5,12 +5,19 @@ import chromadb
 DATA_DIR = Path("./data/sessions")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
+# Module-level singleton — reuse across all ResearchSession instances
+_chroma_client = None
+
+def _get_chroma_client() -> chromadb.ClientAPI:
+    global _chroma_client
+    if _chroma_client is None:
+        _chroma_client = chromadb.PersistentClient(path=str(DATA_DIR))
+    return _chroma_client
+
 class ResearchSession:
     def __init__(self, session_id: str):
         self.session_id = session_id
-        # Client initialized with persistent directory
-        self.client = chromadb.PersistentClient(path=str(DATA_DIR))
-        # Get or create collection specific to this session
+        self.client = _get_chroma_client()
         self.collection = self.client.get_or_create_collection(
             name=f"session_{self.session_id.replace('-', '_')}"
         )
