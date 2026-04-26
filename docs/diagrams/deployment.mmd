@@ -5,7 +5,7 @@ architecture-beta
     service ollama(server)[Ollama Runtime] in local
     service db(database)[ChromaDB Vector Store] in local
     
-    group internet(cloud)[Public Network / External]
+    group internet(cloud)[Public Network]
     service ep(internet)[Europe PMC API] in internet
     service pm(internet)[PubMed NCBI API] in internet
     service ct(internet)[ClinicalTrials API] in internet
