@@ -16,7 +16,7 @@ graph TD
 
     subgraph Local LLM Runtime
         Ollama[Ollama API]:::llm
-        Gemma[(Gemma 4:e2b Model)]:::llm
+        LLMModel[(DeepSeek-R1:8b Model)]:::llm
     end
 
     subgraph Session Intelligence Layer
@@ -51,7 +51,7 @@ graph TD
 
     Dedupe -->|Evidence Pack| Router
     Router -->|Synthesize Final Answer| Ollama
-    Ollama <--> Gemma
+    Ollama <--> LLMModel
 
     Router -->|Draft Output + Evidence| Verifier
     Verifier -->|Verification Prompt| Ollama

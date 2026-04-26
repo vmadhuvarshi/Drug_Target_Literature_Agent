@@ -13,13 +13,13 @@ However, researchers still need the synthesis, extraction, and reasoning capabil
 The system is built as a generic abstraction consisting of five distinct layers:
 
 ### 1. Local LLM Runtime
-The foundational engine running the open-weights models (`gemma4:e2b`). Executed via `Ollama`, this layer ensures that all natural language understanding, generative output, and tool-call planning occur purely within the enterprise perimeter.
+The foundational engine running the open-weights models (`deepseek-r1:8b`). Executed via `Ollama`, this layer ensures that all natural language understanding, generative output, and tool-call planning occur purely within the enterprise perimeter.
 
 ### 2. Agentic Orchestration Layer
 A deterministic routing script that prompts the LLM with a list of available search tools. Using strict JSON schemas, the LLM decides *which* databases to query and *how* to construct the search strings based on the user's input, without directly synthesizing the final answer yet.
 
 ### 3. Multi-Source Retrieval Layer
-The execution boundary. Python functions execute the LLM's planned JSON queries against parallel APIs (e.g., Europe PMC, PubMed, ClinicalTrials.gov). Responses are parsed, deeply aggregated, and deduplicated before being passed back *into* the local LLM's context window.
+The execution boundary. Python functions execute the LLM's planned JSON queries against parallel APIs (e.g., Europe PMC, PubMed, ClinicalTrials.gov). Europe PMC results are sorted by citation count (`sort=cited`) and PubMed results by relevance score (`sort=relevance`), ensuring landmark papers surface alongside recent publications. Responses are parsed, deeply aggregated, and deduplicated before being passed back *into* the local LLM's context window.
 
 ### 4. Session Intelligence Layer
 Uses a local Vector Database (`ChromaDB`) to persist retrieved abstracts and trial records tied to a unique session ID. This allows for persistent "Session Memory" where researchers can query follow-up questions mathematically linked to prior outputs without repeatedly hitting external APIs.

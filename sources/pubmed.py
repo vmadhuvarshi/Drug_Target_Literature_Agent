@@ -21,6 +21,7 @@ DEFAULT_EMAIL = "user@example.com"
 def search_pubmed(
     query: str,
     limit: int = 5,
+    sort: str = "relevance",
     tool_name: str = DEFAULT_TOOL_NAME,
     email: str = DEFAULT_EMAIL,
 ) -> list[dict]:
@@ -39,6 +40,7 @@ def search_pubmed(
         "term": query,
         "retmode": "json",
         "retmax": limit,
+        "sort": sort,
         "tool": tool_name,
         "email": email,
     }

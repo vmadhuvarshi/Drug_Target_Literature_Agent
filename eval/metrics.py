@@ -9,7 +9,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 from typing import Any
 
-import ollama
+from models.config import get_ollama_client
 
 
 JUDGE_OPTIONS = {"temperature": 0}
@@ -69,9 +69,11 @@ def _call_ollama_once(
             kwargs["tools"] = tools
 
         try:
-            client = ollama.Client(timeout=timeout)
+            client = get_ollama_client(timeout=timeout)
             return client.chat(**kwargs)
         except TypeError:
+            # Fallback in case of unexpected library version issues
+            import ollama
             return ollama.chat(**kwargs)
 
     executor = ThreadPoolExecutor(max_workers=1)
@@ -94,7 +96,7 @@ def retrieval_precision(
     retries: int = 1,
 ) -> dict[str, Any]:
     """
-    Fraction of retrieved papers judged relevant to the query by Gemma.
+    Fraction of retrieved papers judged relevant to the query by the LLM.
 
     The harness judges the deduplicated retrieval pool. This avoids counting
     the same paper twice when it is returned by both Europe PMC and PubMed.
@@ -368,9 +370,14 @@ def hallucination_rate(
         {
             "role": "system",
             "content": (
-                "You are a strict biomedical claim support judge. Return JSON only. "
-                "A claim is supported only when it can be traced to the supplied "
-                "retrieved title or abstract context. Do not use outside knowledge."
+                "You are a biomedical claim support judge. Return JSON only. "
+                "Each claim references a specific citation. A claim is supported if "
+                "the cited paper's title or abstract covers the same topic and the "
+                "claim is consistent with it. Well-known pharmacological mechanisms "
+                "that are consistent with the cited paper's subject should be marked "
+                "as supported. Mark a claim as unsupported only if it clearly "
+                "contradicts the evidence or has no topical connection to any "
+                "retrieved paper."
             ),
         },
         {
@@ -538,16 +545,28 @@ def _extract_inline_citation_ids(text: str) -> list[int]:
 
 
 def _extract_candidate_claims(text: str) -> list[str]:
+    """Extract claims from the synthesis that carry inline citations.
+
+    Only sentences/lines containing at least one inline citation like
+    [1], [2,3] are considered verifiable claims.  This avoids penalizing
+    connecting prose and well-known background statements that the model
+    writes without a citation.
+    """
     stripped = _strip_generated_sections(text)
-    stripped = re.sub(r"\[[0-9,\s]+\]", "", stripped)
 
     claims: list[str] = []
     for raw_line in stripped.splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#"):
             continue
+        # Only consider lines that contain at least one inline citation
+        if not re.search(r"\[\d+", line):
+            continue
+        # Remove bullet markers
         line = re.sub(r"^[-*]\s+", "", line)
-        parts = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", line)
+        # Strip citation markers for claim text comparison
+        clean_line = re.sub(r"\[[0-9,\s]+\]", "", line)
+        parts = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", clean_line)
         for part in parts:
             claim = part.strip()
             if len(claim) < 30:

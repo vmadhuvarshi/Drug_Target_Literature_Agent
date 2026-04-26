@@ -11,7 +11,7 @@ import requests
 EUROPE_PMC_API = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
 
 
-def search_europe_pmc(query: str, limit: int = 5) -> list[dict]:
+def search_europe_pmc(query: str, limit: int = 5, sort: str = "cited") -> list[dict]:
     """
     Search Europe PMC for biomedical literature.
 
@@ -22,6 +22,7 @@ def search_europe_pmc(query: str, limit: int = 5) -> list[dict]:
         "format": "json",
         "resultType": "core",
         "pageSize": limit,
+        "sort": sort,
     }
 
     response = requests.get(EUROPE_PMC_API, params=params, timeout=30)

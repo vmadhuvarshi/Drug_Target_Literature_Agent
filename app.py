@@ -3,6 +3,7 @@ import threading
 import streamlit as st
 
 from models.verification import VerificationReport, VerificationStatus
+from models.config import MODEL_NAME
 from retrieval_router import route_and_retrieve
 from sources.pubmed import DEFAULT_TOOL_NAME, DEFAULT_EMAIL
 from verification_agent import verify_all
@@ -11,7 +12,7 @@ from verification_agent import verify_all
 # Page Configuration
 # ──────────────────────────────────────────────
 st.set_page_config(
-    page_title="Gemma 4 Clinical Research Agent",
+    page_title="Clinical Research Agent",
     page_icon="🧬",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -20,7 +21,7 @@ st.set_page_config(
 # ──────────────────────────────────────────────
 # Constants
 # ──────────────────────────────────────────────
-MODEL_NAME = "gemma4:e2b"
+# MODEL_NAME is imported from models.config
 
 # Badge colors per source
 SOURCE_COLORS = {
@@ -333,7 +334,7 @@ with st.sidebar:
     st.markdown("---")
 
     st.markdown(
-        "This tool runs **100 % locally** on your machine using "
+        "This tool runs **locally** on your network using "
         f"**{MODEL_NAME}** via [Ollama](https://ollama.com). "
         "Your queries and data never leave your network — ideal for "
         "**IP-sensitive pharmaceutical research**."
@@ -451,9 +452,9 @@ with st.sidebar:
     st.markdown("#### How it works")
     st.markdown(
         "1. You ask a question about a drug-target interaction.\n"
-        "2. Gemma 4 decides **which sources** to query using function calling.\n"
+        f"2. {MODEL_NAME} decides **which sources** to query using function calling.\n"
         "3. The agent fetches real-time results from **up to 3 databases**.\n"
-        "4. Gemma synthesises a cited summary with references.\n"
+        f"4. {MODEL_NAME} synthesises a cited summary with references.\n"
         "5. A **verification agent** checks each claim against its source."
     )
 
@@ -469,7 +470,7 @@ with st.sidebar:
         st.markdown(f"- *{ex}*")
 
     st.markdown("---")
-    st.caption("Powered by Gemma 4 · Europe PMC · PubMed · ClinicalTrials.gov · Streamlit")
+    st.caption(f"Powered by {MODEL_NAME} · Europe PMC · PubMed · ClinicalTrials.gov · Streamlit")
 
 
 # ──────────────────────────────────────────────
@@ -525,7 +526,7 @@ def _render_entry(entry: dict):
 # ──────────────────────────────────────────────
 # Main Chat Area
 # ──────────────────────────────────────────────
-st.markdown("## 🔬 Gemma 4 Clinical Research Agent")
+st.markdown(f"## 🔬 {MODEL_NAME} Clinical Research Agent")
 st.caption("Ask any question about drug-target interactions and get a cited literature summary.")
 
 # Render existing history

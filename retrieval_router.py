@@ -9,8 +9,7 @@ compact evidence pack for mandatory synthesis.
 import re
 from difflib import SequenceMatcher
 
-import ollama
-
+from models.config import MODEL_NAME, get_ollama_client
 from sources.clinical_trials import search_clinical_trials
 from sources.europe_pmc import search_europe_pmc
 from sources.pubmed import search_pubmed
@@ -19,7 +18,7 @@ from sources.pubmed import search_pubmed
 # ──────────────────────────────────────────────
 # Constants
 # ──────────────────────────────────────────────
-MODEL_NAME = "gemma4:e2b"
+# MODEL_NAME is imported from models.config
 ROUTING_OPTIONS = {"temperature": 0.1}
 SYNTHESIS_OPTIONS = {"temperature": 0.2}
 SOURCE_DISPLAY_ORDER = [
@@ -186,7 +185,9 @@ def _chat(messages: list[dict], tools: list[dict] | None = None, options: dict |
         kwargs["tools"] = tools
     if options is not None:
         kwargs["options"] = options
-    return ollama.chat(**kwargs)
+        
+    client = get_ollama_client()
+    return client.chat(**kwargs)
 
 
 # ──────────────────────────────────────────────
@@ -384,9 +385,7 @@ def _relevance_score(item: dict, user_query: str) -> float:
 
     score = (title_overlap * 4.0) + (abstract_overlap * 1.5) + phrase_bonus
 
-    year = item.get("year")
-    if isinstance(year, int):
-        score += max(min((year - 2018) * 0.2, 1.6), 0.0)
+    # No recency bias — landmark older papers should rank equally
 
     score += max(0, DEFAULT_LIMIT + 1 - item.get("source_rank", DEFAULT_LIMIT + 1)) * 0.3
 
@@ -787,13 +786,22 @@ def _run_synthesis(user_query: str, evidence_packet: str, reference_map: dict[in
 
 
 def _call_source(fn_name: str, query: str, limit: int,
-                 pubmed_tool_name: str, pubmed_email: str) -> list[dict]:
+                 pubmed_tool_name: str, pubmed_email: str,
+                 sort: str | None = None) -> list[dict]:
     """Call a source function by its function name."""
     fn = FUNCTION_DISPATCH.get(fn_name)
     if fn is None:
         return []
     if fn_name == "search_pubmed":
-        return fn(query=query, limit=limit, tool_name=pubmed_tool_name, email=pubmed_email)
+        kwargs: dict = {"query": query, "limit": limit, "tool_name": pubmed_tool_name, "email": pubmed_email}
+        if sort is not None:
+            kwargs["sort"] = sort
+        return fn(**kwargs)
+    if fn_name == "search_europe_pmc":
+        kwargs = {"query": query, "limit": limit}
+        if sort is not None:
+            kwargs["sort"] = sort
+        return fn(**kwargs)
     return fn(query=query, limit=limit)
 
 

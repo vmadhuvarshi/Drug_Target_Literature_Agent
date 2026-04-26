@@ -3,7 +3,7 @@ Citation Verification Agent — second-pass quality gate.
 
 After the primary agent generates a synthesized response with citations,
 this module extracts each claim-citation pair, checks whether the cited
-source actually supports the claim via a dedicated Gemma 4 call, and
+source actually supports the claim via a dedicated LLM call, and
 returns a structured verification report.
 """
 
@@ -11,7 +11,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-import ollama
+from models.config import MODEL_NAME, get_ollama_client
 
 from models.verification import (
     ClaimCitation,
@@ -24,7 +24,7 @@ from models.verification import (
 # ──────────────────────────────────────────────
 # Constants
 # ──────────────────────────────────────────────
-MODEL_NAME = "gemma4:e2b"
+# MODEL_NAME is imported from models.config
 VERIFICATION_OPTIONS = {"temperature": 0.1}
 MAX_WORKERS = 4  # Parallel verification threads
 
@@ -184,7 +184,8 @@ def verify_single_claim(
     )
 
     try:
-        response = ollama.chat(
+        client = get_ollama_client()
+        response = client.chat(
             model=MODEL_NAME,
             messages=[
                 {"role": "system", "content": system_prompt},
