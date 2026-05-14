@@ -125,7 +125,7 @@ Results are written to `eval/results/` as JSON, CSV, and a summary markdown repo
 
 Worth saying out loud, since anyone evaluating this seriously will ask:
 
-- **Gemma 4 (4B) is a small local model.** Synthesis quality is noticeably below GPT-4-class models. For production pharma use, you'd want to run a larger model (Llama 3.3 70B, Gemma 27B, or similar) on appropriate hardware. The architecture is model-agnostic — swap via environment variable.
+- **Gemma 4 (4B) is a small local model.** Synthesis quality is noticeably below GPT-4-class models. For production pharma use, you'd want to run a larger model (Gemma 26B, or Gemma 31B) on appropriate hardware. The architecture is model-agnostic — swap via environment variable.
 - **"Zero leakage" refers to LLM traffic, not search traffic.** The search terms themselves go to public APIs. For truly sensitive queries, you'd want to add query obfuscation or route through an internal literature mirror.
 - **No enterprise features.** No auth, audit logging, multi-tenancy, or access controls. This is a reference implementation, not a deployable product.
 - **The verification agent is a helpful check, not a guarantee.** It catches obvious hallucinations but can miss subtle misattributions. Treat confidence scores as directional.
